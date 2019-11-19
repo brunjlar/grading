@@ -16,6 +16,7 @@ library
         , bytestring
         , containers
         , directory
+        , filepath
         , QuickCheck
         , typed-process
         , unliftio
