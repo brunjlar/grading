@@ -1,6 +1,7 @@
 module TestSubmission.Docker
     ( ContainerName
     , ContainerId
+    , ExitCode
     , runDetachedContainer
     , stopContainer
     , withDetachedContainer
@@ -13,6 +14,7 @@ import           Control.Exception          (bracket)
 import           Control.Monad              (void)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.String                (IsString (..))
+import           GHC.IO.Exception           (ExitCode)
 import           System.Process.Typed
 
 type ContainerName = String
@@ -37,12 +39,12 @@ withDetachedContainer n workDir act = bracket
     stopContainer
     act
 
-execInContainer :: ContainerId -> String -> IO ()
-execInContainer (ContainerId cid) command = runProcess_ $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
+execInContainer :: ContainerId -> String -> IO ExitCode
+execInContainer (ContainerId cid) command = runProcess $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
 
-copyToContainer :: ContainerId -> FilePath -> FilePath -> IO ()
+copyToContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
 copyToContainer (ContainerId cid) from to =
-    runProcess_ $ fromString $ "docker cp " ++ from ++ " " ++ cid ++ ":" ++ to
+    runProcess $ fromString $ "docker cp " ++ from ++ " " ++ cid ++ ":" ++ to
 
-copyFromContainer :: ContainerId -> FilePath -> FilePath -> IO ()
-copyFromContainer (ContainerId cid) from to = runProcess_ $ fromString $ "docker cp " ++ cid ++ ":" ++ from ++ " " ++ to
+copyFromContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
+copyFromContainer (ContainerId cid) from to = runProcess $ fromString $ "docker cp " ++ cid ++ ":" ++ from ++ " " ++ to
