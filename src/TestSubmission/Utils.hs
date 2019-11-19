@@ -3,7 +3,9 @@
 
 module TestSubmission.Utils
     ( TestCase (..)
-    , label
+    , TestLabel
+    , TestResult (..)
+    , getTestLabel
     , testTC
     , testTCs
     ) where
@@ -13,15 +15,17 @@ import qualified Data.Map.Strict as Map
 import           Test.QuickCheck hiding (label, Result (..))
 import qualified Test.QuickCheck as QC
 
+type TestLabel = String
+
 data TestCase where
-    TC  :: Testable prop => String -> prop -> TestCase
-    TCs :: String -> [TestCase] -> TestCase
+    TC  :: Testable prop => TestLabel -> prop -> TestCase
+    TCs :: TestLabel -> [TestCase] -> TestCase
 
-label :: TestCase -> String
-label (TC s _)  = s
-label (TCs s _) = s
+getTestLabel :: TestCase -> String
+getTestLabel (TC s _)  = s
+getTestLabel (TCs s _) = s
 
-data Result = 
+data TestResult = 
       Success
     | Failure { resLabels    :: [String]
               , resOutput    :: String
@@ -30,7 +34,7 @@ data Result =
               }
     deriving (Show, Read, Eq, Ord)
 
-testTC :: Int -> TestCase -> IO Result
+testTC :: Int -> TestCase -> IO TestResult
 testTC timeout (TC l prop) = do
     res <- quickCheckWithResult stdArgs{chatty = False} $ within timeout prop
     return $ case res of
@@ -47,5 +51,5 @@ testTC timeout (TCs l xs) = go xs
             Success            -> go ys
             Failure ls o cs ex -> return $ Failure (l : ls) o cs ex
 
-testTCs :: Int -> [TestCase] -> IO (Map String Result)
-testTCs timeout = fmap Map.fromList . mapM (\tc -> (label tc,) <$> testTC timeout tc)
+testTCs :: Int -> [TestCase] -> IO (Map TestLabel TestResult)
+testTCs timeout = fmap Map.fromList . mapM (\tc -> (getTestLabel tc,) <$> testTC timeout tc)

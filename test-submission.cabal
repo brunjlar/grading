@@ -7,10 +7,15 @@ Author:        Lars Bruenjes
 
 library
     exposed-modules:
-          TestSubmission.Utils
+          TestSubmission.Docker
+        , TestSubmission.Result
+        , TestSubmission.Submit
+        , TestSubmission.Utils
     build-depends:
           base >= 4.12 && < 5
+        , bytestring
         , containers
+        , directory
         , QuickCheck
         , typed-process
         , unliftio
