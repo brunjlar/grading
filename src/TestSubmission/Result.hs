@@ -3,6 +3,7 @@ module TestSubmission.Result
     , toResult
     ) where
 
+import Data.Map.Strict      (Map)
 import System.Directory     (doesFileExist)
 import TestSubmission.Utils
 import Text.Read            (readMaybe)
@@ -11,7 +12,7 @@ data Result =
       FatalError
     | ExtractionError String
     | BuildError String
-    | Tested (Either String TestResult) (Maybe String)
+    | Tested (Either String (Map TestLabel TestResult)) (Maybe String)
     deriving (Show, Read, Eq, Ord)
 
 toResult :: FilePath -> FilePath -> FilePath -> FilePath -> IO Result
@@ -28,8 +29,8 @@ toResult extractLog buildLog testLog hlintLog = do
                             Just r  -> Right r
                 h <- readFile hlintLog
                 let m = case h of
-                            "No hints" -> Nothing
-                            hints      -> Just hints
+                            "No hints\n" -> Nothing
+                            hints        -> Just hints
                 return $ Tested e m
             else BuildError <$> readFile buildLog
         else ExtractionError <$> readFile extractLog
