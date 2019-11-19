@@ -40,7 +40,9 @@ withDetachedContainer n workDir act = bracket
     act
 
 execInContainer :: ContainerId -> String -> IO ExitCode
-execInContainer (ContainerId cid) command = runProcess $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
+execInContainer (ContainerId cid) command = do
+    (e, _, _) <- readProcess $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
+    return e
 
 copyToContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
 copyToContainer (ContainerId cid) from to =
