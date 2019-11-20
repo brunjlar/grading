@@ -1,4 +1,4 @@
-module TestSubmission.Docker
+module Grading.Utils.Docker
     ( ImageName
     , ContainerId
     , ExitCode

@@ -1,4 +1,4 @@
-Name:          test-submission
+Name:          grading-utils
 Version:       0.0.0.0
 Cabal-Version: >= 2.0
 Build-Type:    Simple
@@ -7,10 +7,11 @@ Author:        Lars Bruenjes
 
 library
     exposed-modules:
-          TestSubmission.Docker
-        , TestSubmission.Result
-        , TestSubmission.Submit
-        , TestSubmission.Utils
+          Grading.Utils.Docker
+        , Grading.Utils.Result
+        , Grading.Utils.Submit
+        , Grading.Utils.Tar
+        , Grading.Utils.TestUtils
     build-depends:
           base >= 4.12 && < 5
         , bytestring
@@ -18,17 +19,29 @@ library
         , directory
         , filepath
         , QuickCheck
+        , tar
         , typed-process
         , unliftio
+        , zlib
     hs-source-dirs: src
     default-language: Haskell2010
     ghc-options: -Wall
+
+executable tar-folder
+  hs-source-dirs:      app
+  main-is:             tar-folder.hs
+  build-depends:       base >= 4.12 && < 5
+                     , bytestring
+                     , grading-utils
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
 
 executable test-submission
   hs-source-dirs:      app
   main-is:             test-submission.hs
   build-depends:       base >= 4.12 && < 5
+                     , grading-utils
                      , optparse-generic
-                     , test-submission
   ghc-options:         -Wall -threaded -O3
   default-language:    Haskell2010

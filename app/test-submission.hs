@@ -10,7 +10,7 @@ module Main
 
 import Options.Generic
 
-import TestSubmission.Submit
+import Grading.Utils.Submit
 
 data Args = Args 
     { image   :: ImageName <?> "docker image name"

@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs         #-}
 {-# LANGUAGE TupleSections #-}
 
-module TestSubmission.Utils
+module Grading.Utils.TestUtils
     ( TestCase (..)
     , TestLabel
     , TestResult (..)

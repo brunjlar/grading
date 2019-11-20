@@ -1,13 +1,14 @@
-module TestSubmission.Submit
+module Grading.Utils.Submit
     ( ImageName
     , submit
     ) where
 
 import Control.Monad         (void)
 import System.FilePath       ((</>), (<.>))
-import TestSubmission.Docker
-import TestSubmission.Result
 import UnliftIO.Temporary    (withSystemTempDirectory)
+
+import Grading.Utils.Docker
+import Grading.Utils.Result
 
 submit :: ImageName -> FilePath -> IO Result
 submit n submission = withSystemTempDirectory "temp" $ \fp ->

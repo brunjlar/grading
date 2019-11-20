@@ -1,12 +1,13 @@
-module TestSubmission.Result
+module Grading.Utils.Result
     ( Result (..)
     , toResult
     ) where
 
 import Data.Map.Strict      (Map)
 import System.Directory     (doesFileExist)
-import TestSubmission.Utils
 import Text.Read            (readMaybe)
+
+import Grading.Utils.TestUtils
 
 data Result =
       FatalError
