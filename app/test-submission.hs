@@ -13,8 +13,8 @@ import Options.Generic
 import Grading.Utils.Submit
 
 data Args = Args 
-    { image   :: ImageName <?> "docker image name"
-    , archive :: FilePath  <?> "path to submission archive"
+    { image   :: ImageName      <?> "docker image name"
+    , archive :: Maybe FilePath <?> "path to submission archive"
     } deriving (Show, Generic)
 
 instance ParseRecord Args where
@@ -22,6 +22,6 @@ instance ParseRecord Args where
 
 main :: IO ()
 main = do
-    Args (Helpful n) (Helpful s) <- getRecord "Tests a submission and writes the result to standard output."
-    res <- submit n s
+    Args (Helpful n) (Helpful ms) <- getRecord "Tests a submission and writes the result to standard output."
+    res <- submit n ms
     print res

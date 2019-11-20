@@ -27,7 +27,7 @@ runDetachedContainer n workDir = do
     let w = case workDir of
                 Nothing -> ""
                 Just d  -> " -w " ++ d
-    (res, _) <- readProcess_ $ fromString $ "docker run -dit" ++ w ++ " " ++ n
+    (res, _) <- readProcess_ $ fromString $ "docker run -dt" ++ w ++ " " ++ n
     return $ ContainerId $ BS.unpack $ BS.takeWhile (/= '\n') res
 
 stopContainer :: ContainerId -> IO ()
@@ -41,7 +41,7 @@ withDetachedContainer n workDir act = bracket
 
 execInContainer :: ContainerId -> String -> IO ExitCode
 execInContainer (ContainerId cid) command =
-    runProcessSuppressOutput $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
+    runProcessSuppressOutput $ fromString $ "docker exec -t " ++ cid ++ " " ++ command
 
 copyToContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
 copyToContainer (ContainerId cid) from to =

@@ -18,6 +18,8 @@ library
         , containers
         , directory
         , filepath
+        , pipes
+        , pipes-bytestring
         , QuickCheck
         , tar
         , typed-process
