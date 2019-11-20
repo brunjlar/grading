@@ -1,5 +1,6 @@
 module TestSubmission.Submit
-    ( submit
+    ( ImageName
+    , submit
     ) where
 
 import Control.Monad         (void)
@@ -8,7 +9,7 @@ import TestSubmission.Docker
 import TestSubmission.Result
 import UnliftIO.Temporary    (withSystemTempDirectory)
 
-submit :: ContainerName -> FilePath -> IO Result
+submit :: ImageName -> FilePath -> IO Result
 submit n submission = withSystemTempDirectory "temp" $ \fp ->
     withDetachedContainer n (Just "/test/") $ \cid -> do
         let extractLog = fp </> "extract" <.> "log"

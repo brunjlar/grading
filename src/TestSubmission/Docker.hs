@@ -1,5 +1,5 @@
 module TestSubmission.Docker
-    ( ContainerName
+    ( ImageName
     , ContainerId
     , ExitCode
     , runDetachedContainer
@@ -17,12 +17,12 @@ import           Data.String                (IsString (..))
 import           GHC.IO.Exception           (ExitCode)
 import           System.Process.Typed
 
-type ContainerName = String
+type ImageName = String
 
 newtype ContainerId = ContainerId String
     deriving (Show, Read, Eq, Ord)
 
-runDetachedContainer :: ContainerName -> Maybe FilePath -> IO ContainerId
+runDetachedContainer :: ImageName -> Maybe FilePath -> IO ContainerId
 runDetachedContainer n workDir = do
     let w = case workDir of
                 Nothing -> ""
@@ -33,20 +33,25 @@ runDetachedContainer n workDir = do
 stopContainer :: ContainerId -> IO ()
 stopContainer (ContainerId cid) = void $ readProcess_ $ fromString $ "docker stop " ++ cid
 
-withDetachedContainer :: ContainerName -> Maybe FilePath -> (ContainerId -> IO a) -> IO a
+withDetachedContainer :: ImageName -> Maybe FilePath -> (ContainerId -> IO a) -> IO a
 withDetachedContainer n workDir act = bracket
     (runDetachedContainer n workDir)
     stopContainer
     act
 
 execInContainer :: ContainerId -> String -> IO ExitCode
-execInContainer (ContainerId cid) command = do
-    (e, _, _) <- readProcess $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
-    return e
+execInContainer (ContainerId cid) command =
+    runProcessSuppressOutput $ fromString $ "docker exec -it " ++ cid ++ " " ++ command
 
 copyToContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
 copyToContainer (ContainerId cid) from to =
-    runProcess $ fromString $ "docker cp " ++ from ++ " " ++ cid ++ ":" ++ to
+    runProcessSuppressOutput $ fromString $ "docker cp " ++ from ++ " " ++ cid ++ ":" ++ to
 
 copyFromContainer :: ContainerId -> FilePath -> FilePath -> IO ExitCode
-copyFromContainer (ContainerId cid) from to = runProcess $ fromString $ "docker cp " ++ cid ++ ":" ++ from ++ " " ++ to
+copyFromContainer (ContainerId cid) from to = 
+    runProcessSuppressOutput $ fromString $ "docker cp " ++ cid ++ ":" ++ from ++ " " ++ to
+
+runProcessSuppressOutput :: ProcessConfig stdin stdoutIgnored stderrIgnored -> IO ExitCode
+runProcessSuppressOutput p = do
+    (e, _, _) <- readProcess p
+    return e
