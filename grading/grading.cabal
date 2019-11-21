@@ -7,23 +7,32 @@ Author:        Lars Bruenjes
 
 library
     exposed-modules:
-          Grading.Utils.Docker
-        , Grading.Utils.Result
+          Grading.API
+        , Grading.Utils.Docker
         , Grading.Utils.Submit
         , Grading.Utils.Tar
-        , Grading.Utils.TestUtils
+        , Grading.Utils.ToResult
     build-depends:
           base >= 4.12 && < 5
         , bytestring
         , containers
         , directory
         , filepath
+        , grading-utils
+        , http-client
+        , mtl
         , pipes
         , pipes-bytestring
         , QuickCheck
+        , servant-client
+        , servant-server
+        , sqlite-simple
         , tar
         , typed-process
         , unliftio
+        , utf8-string
+        , warp
+        , zenc
         , zlib
     hs-source-dirs: src
     default-language: Haskell2010

@@ -1,0 +1,18 @@
+Name:          grading-utils
+Version:       0.0.0.0
+Cabal-Version: >= 2.0
+Build-Type:    Simple
+Copyright:     © 2019 Lars Bruenjes
+Author:        Lars Bruenjes
+
+library
+    exposed-modules:
+          Grading.Utils.Result
+        , Grading.Utils.Test
+    build-depends:
+          base >= 4.12 && < 5
+        , containers
+        , QuickCheck
+    hs-source-dirs: src
+    default-language: Haskell2010
+    ghc-options: -Wall

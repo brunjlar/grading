@@ -12,6 +12,7 @@ import           UnliftIO.Temporary    (withSystemTempDirectory)
 
 import           Grading.Utils.Docker
 import           Grading.Utils.Result
+import           Grading.Utils.ToResult
 
 submit :: ImageName -> Maybe FilePath -> IO Result
 submit n msubmission = withSystemTempDirectory "temp" $ \fp -> case msubmission of

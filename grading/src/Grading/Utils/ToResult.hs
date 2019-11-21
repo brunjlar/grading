@@ -1,20 +1,11 @@
-module Grading.Utils.Result
-    ( Result (..)
-    , toResult
+module Grading.Utils.ToResult
+    ( toResult
     ) where
 
-import Data.Map.Strict      (Map)
 import System.Directory     (doesFileExist)
 import Text.Read            (readMaybe)
 
-import Grading.Utils.TestUtils
-
-data Result =
-      FatalError
-    | ExtractionError String
-    | BuildError String
-    | Tested (Either String (Map TestLabel TestResult)) (Maybe String)
-    deriving (Show, Read, Eq, Ord)
+import Grading.Utils.Result
 
 toResult :: FilePath -> FilePath -> FilePath -> FilePath -> IO Result
 toResult extractLog buildLog testLog hlintLog = do

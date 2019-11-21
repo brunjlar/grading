@@ -1,5 +1,8 @@
-resolver: nightly-2019-10-28
+resolver: lts-14.15
 packages:
-- .
+- grading/
+- grading-utils
 nix:
     enable: false
+extra-deps:
+- zenc-0.1.1@sha256:e4be3e5e9fe1a1ade05910909c6e5b5a8eff72e697868b03955c9781b0443947,964
