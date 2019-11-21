@@ -1,5 +1,8 @@
 module Grading.Client
-    ( users
+    ( User
+    , Task
+    , getPort
+    , users
     , tasks
     , uploadFolder
     ) where
@@ -9,15 +12,17 @@ import Codec.Compression.GZip (compress)
 import Control.Exception (throwIO)
 import Control.Monad (unless)
 import Data.ByteString.Lazy (ByteString)
-import Grading.API
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Servant
 import Servant.Client
 import System.Directory (doesDirectoryExist, makeAbsolute)
 import System.IO.Error (userError)
 
-users :: ClientM [User]
-tasks :: ClientM [Task]
+import Grading.API
+import Grading.Server (getPort)
+
+users  :: ClientM [User]
+tasks  :: ClientM [Task]
 upload :: User -> Task -> ByteString -> ClientM NoContent
 users :<|> tasks :<|> upload = client gradingAPI
 

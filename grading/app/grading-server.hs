@@ -8,13 +8,9 @@ module Main
     ( main
     ) where
 
-import Data.Maybe      (fromMaybe)
 import Options.Generic
 
-import Grading.Server  (Port, serveGrading)
-
-defaultPort :: Port
-defaultPort = 8080
+import Grading.Server
 
 data Arg = Arg (Maybe Port <?> "port")
     deriving (Show, Generic, ParseRecord)
@@ -22,6 +18,5 @@ data Arg = Arg (Maybe Port <?> "port")
 main :: IO ()
 main = do
     Arg (Helpful mport) <- getRecord "Start grading server."
-    let port = fromMaybe defaultPort mport
-    putStrLn $ "starting server on port " ++ show port
-    serveGrading port
+    putStrLn $ "starting server on port " ++ show (getPort mport)
+    serveGrading mport

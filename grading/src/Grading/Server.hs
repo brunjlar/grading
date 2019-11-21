@@ -4,29 +4,55 @@
 
 module Grading.Server
     ( Port
-    , serveGradingT
+    , getPort
     , serveGrading
     ) where
 
+import Data.Maybe               (fromMaybe)
 import Network.Wai.Handler.Warp (Port, run)
 import Servant
 
 import Grading.API
-import Grading.Server.Monad.Class
-import Grading.Server.Monad.GradingM
+import Grading.Server.GradingM
 import Grading.Server.Handlers
 
-serveGrading :: Port -> IO ()
-serveGrading = serveGradingT (Proxy :: Proxy GradingM)
+defaultPort :: Port
+defaultPort = 8080
 
-serveGradingT :: MonadGrading m => Proxy m -> Port -> IO ()
-serveGradingT proxy port = do
-    c <- initContext proxy
-    let app = gradingAppT proxy c
-    run port app
+getPort :: Maybe Port -> Port
+getPort = fromMaybe defaultPort
 
-gradingAppT :: MonadGrading m => Proxy m -> GradingContext m -> Application
-gradingAppT p c = serve gradingAPI $ gradingServer p c
+serveGrading :: Maybe Port -> IO ()
+serveGrading mport = do
+    gc <- initContext
+    run (getPort mport) $ gradingAppT gc
 
-gradingServer :: MonadGrading m => Proxy m -> GradingContext m -> Server GradingAPI
-gradingServer p c = hoistServer gradingAPI (toHandler p c) gradingServerT
+gradingAppT :: GC -> Application
+gradingAppT gc = serve gradingAPI $ gradingServer gc
+
+gradingServer :: GC -> Server GradingAPI
+gradingServer gc = hoistServer gradingAPI (runGradingM gc) gradingServerT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

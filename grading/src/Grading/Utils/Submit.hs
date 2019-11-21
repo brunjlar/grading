@@ -1,13 +1,16 @@
 module Grading.Utils.Submit
     ( ImageName
     , submit
+    , submitBS
     ) where
 
+import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Lazy as B
 import           Pipes
 import qualified Pipes.ByteString      as P
 import           System.Directory      (removeFile)
 import           System.FilePath       ((</>), (<.>))
-import           System.IO             (withBinaryFile, IOMode (WriteMode))
+import           System.IO             (IOMode (WriteMode), withBinaryFile)
 import           UnliftIO.Temporary    (withSystemTempDirectory)
 
 import           Grading.Utils.Docker
@@ -18,7 +21,7 @@ submit :: ImageName -> Maybe FilePath -> IO Result
 submit n msubmission = withSystemTempDirectory "temp" $ \fp -> case msubmission of
     Just s  -> go fp s
     Nothing -> do
-        let s = fp </> "submission" <.> "tar" <.> "gz"
+        let s = getArchivePath fp
         fileFromStdIn s
         res <- go fp s
         removeFile s
@@ -37,6 +40,15 @@ submit n msubmission = withSystemTempDirectory "temp" $ \fp -> case msubmission 
         void $ copyFromContainer cid "/test/test.log" testLog
         void $ copyFromContainer cid "/test/hlint.log" hlintLog
         toResult extractLog buildLog testLog hlintLog 
+
+submitBS :: ImageName -> ByteString -> IO Result
+submitBS n bs = withSystemTempDirectory "temp" $ \fp -> do
+    let s = getArchivePath fp
+    B.writeFile s bs
+    submit n $ Just s
+
+getArchivePath :: FilePath -> FilePath
+getArchivePath fp = fp </> "submission" <.> "tar" <.> "gz"
 
 fileFromStdIn :: FilePath -> IO ()
 fileFromStdIn fp =

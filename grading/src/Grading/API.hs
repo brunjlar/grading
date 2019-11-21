@@ -11,16 +11,16 @@ module Grading.API
 
 import Data.ByteString.Lazy (ByteString)
 import Servant
-import Text.Encoding.Z (UserString)
 
 gradingAPI :: Proxy GradingAPI
 gradingAPI = Proxy
 
-type User = UserString
+type User = String
 
 type Task = Int
 
 type GradingAPI = 
-         "users" :> Get '[JSON] [User]
-    :<|> "tasks" :> Get '[JSON] [Int]
+         "users"  :> Get '[JSON] [User]
+    :<|> "tasks"  :> Get '[JSON] [Int]
     :<|> "upload" :> Capture "user" User :> Capture "task" Task :> ReqBody '[OctetStream] ByteString :> Post '[JSON] NoContent
+

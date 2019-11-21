@@ -11,9 +11,8 @@ library
         , Grading.Client
         , Grading.Utils.Docker
         , Grading.Server
+        , Grading.Server.GradingM
         , Grading.Server.Handlers
-        , Grading.Server.Monad.Class
-        , Grading.Server.Monad.GradingM
         , Grading.Utils.Submit
         , Grading.Utils.Tar
         , Grading.Utils.ToResult
@@ -37,7 +36,6 @@ library
         , unliftio
         , utf8-string
         , warp
-        , zenc
         , zlib
     hs-source-dirs: src
     default-language: Haskell2010
@@ -76,5 +74,6 @@ executable upload-submission
   main-is:             upload-submission.hs
   build-depends:       base >= 4.12 && < 5
                      , grading
+                     , optparse-generic
   ghc-options:         -Wall -O3
   default-language:    Haskell2010
