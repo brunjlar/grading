@@ -1,27 +1,27 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
+
 module Main
     ( main
     ) where
 
-import Grading.Server (Port, serveGrading)
-import System.Environment (getArgs)
-import Text.Read (readMaybe)
+import Data.Maybe      (fromMaybe)
+import Options.Generic
+
+import Grading.Server  (Port, serveGrading)
 
 defaultPort :: Port
 defaultPort = 8080
 
+data Arg = Arg (Maybe Port <?> "port")
+    deriving (Show, Generic, ParseRecord)
+
 main :: IO ()
 main = do
-    xs <- getArgs 
-    case xs of
-        [s] -> case readMaybe s of
-            Just port -> runOnPort port
-            Nothing   -> usage
-        []  -> runOnPort defaultPort
-        _   -> usage
-  where
-    usage = putStrLn "USAGE: grading [PORT]"
-
-runOnPort :: Port -> IO ()
-runOnPort port = do
+    Arg (Helpful mport) <- getRecord "Start grading server."
+    let port = fromMaybe defaultPort mport
     putStrLn $ "starting server on port " ++ show port
     serveGrading port
