@@ -29,7 +29,6 @@ initContext = do
     lock <- newMVar ()
     let db = "db"
     withConnection db $ \conn -> do
-        execute_ conn "PRAGMA foreign_keys = ON"
         execute_ conn "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL)" 
         execute_ conn "CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, userid TEXT NOT NULL REFERENCES users(id), time TEXT NOT NULL, archive BLOB NOT NULL)"
 
@@ -51,7 +50,11 @@ logMsg msg = do
 
 withDB :: (Connection -> GradingM a) -> GradingM a
 withDB f = GradingM $ ReaderT $ \gc -> do
-    ea <- liftIO $ withConnection (gcDB gc) $ runHandler . runGradingM gc . f
+    ea <- liftIO $ withConnection (gcDB gc) $ \conn -> do
+        execute_ conn "PRAGMA foreign_keys = ON"
+        runHandler . runGradingM gc . f $ conn
     case ea of
         Left err -> throwError err
         Right a  -> return a
+
+

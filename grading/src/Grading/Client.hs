@@ -2,8 +2,10 @@ module Grading.Client
     ( User
     , Task
     , getPort
+    , addUserIO
     , users
     , tasks
+    , listUsers
     , uploadFolder
     ) where
 
@@ -20,19 +22,39 @@ import System.IO.Error (userError)
 
 import Grading.API
 import Grading.Server (getPort)
+import Grading.Types
 
-users  :: ClientM [User]
-tasks  :: ClientM [Task]
-upload :: User -> Task -> ByteString -> ClientM NoContent
-users :<|> tasks :<|> upload = client gradingAPI
+addUser :: UserName -> EMail -> ClientM NoContent
+users   :: ClientM [User]
+tasks   :: ClientM [Task]
+upload  :: UserName -> Task -> ByteString -> ClientM NoContent
+addUser :<|> users :<|> tasks :<|> upload = client gradingAPI
 
-uploadFolder :: String -> Int -> User -> Task -> FilePath -> IO ()
-uploadFolder host port user task f = do
+addUserIO :: String -> Int -> UserName -> EMail -> IO ()
+addUserIO host port un email = do
+    m <- newManager defaultManagerSettings
+    let env = mkClientEnv m $ BaseUrl Http host port ""
+    res <- runClientM (addUser un email) env
+    case res of
+        Left err        -> throwIO $ userError $ show err
+        Right NoContent -> putStrLn $ "successfully added user '" ++ show un ++ "'"
+
+listUsers :: String -> Int -> IO [User]
+listUsers host port = do
+    m <- newManager defaultManagerSettings
+    let env = mkClientEnv m $ BaseUrl Http host port ""
+    res <- runClientM users env
+    case res of
+        Left err -> throwIO $ userError $ show err
+        Right xs -> return xs
+
+uploadFolder :: String -> Int -> UserName -> Task -> FilePath -> IO ()
+uploadFolder host port un task f = do
     a <- normFolder f
     m <- newManager defaultManagerSettings
     let env = mkClientEnv m $ BaseUrl Http host port ""
     bs  <- compress . write <$> pack a ["."]
-    res <- runClientM (upload user task bs) env
+    res <- runClientM (upload un task bs) env
     case res of
         Left err        -> throwIO $ userError $ show err
         Right NoContent -> putStrLn $ "successfully uploaded " ++ show f
@@ -42,3 +64,18 @@ normFolder f = do
     b <- doesDirectoryExist f
     unless b $ throwIO $ userError $ "folder " ++ show f ++ " does not exists"
     makeAbsolute f
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -13,11 +13,13 @@ library
         , Grading.Server
         , Grading.Server.GradingM
         , Grading.Server.Handlers
+        , Grading.Types
         , Grading.Utils.Submit
         , Grading.Utils.Tar
         , Grading.Utils.ToResult
     build-depends:
           base >= 4.12 && < 5
+        , aeson
         , bytestring
         , containers
         , directory
@@ -25,6 +27,7 @@ library
         , grading-utils
         , http-client
         , mtl
+        , optparse-generic
         , pipes
         , pipes-bytestring
         , QuickCheck
@@ -40,6 +43,24 @@ library
     hs-source-dirs: src
     default-language: Haskell2010
     ghc-options: -Wall
+
+executable grading-add-user
+  hs-source-dirs:      app
+  main-is:             grading-add-user.hs
+  build-depends:       base >= 4.12 && < 5
+                     , grading
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
+
+executable grading-users
+  hs-source-dirs:      app
+  main-is:             grading-users.hs
+  build-depends:       base >= 4.12 && < 5
+                     , grading
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
 
 executable grading-server
   hs-source-dirs:      app

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -6,30 +7,46 @@ module Grading.Server.Handlers
     ( gradingServerT
     ) where
 
+import           Control.Exception         (try, SomeException)
 import           Data.ByteString.Lazy      (ByteString)
 import qualified Data.ByteString.Lazy.UTF8 as B
+import           Database.SQLite.Simple
 import           Servant
 
 import           Grading.API
 import           Grading.Server.GradingM
+import           Grading.Types
 import           Grading.Utils.Submit      (submitBS)
 import           Grading.Utils.Tar         (checkArchive)
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
-         usersHandler
+         addUserHandler
+    :<|> usersHandler
     :<|> tasksHandler
     :<|> uploadHandler
 
+addUserHandler :: UserName -> EMail -> GradingM NoContent
+addUserHandler n e = do
+    let u = User n e
+    res <- withDB $ \conn -> liftIO $ try $ execute conn "INSERT INTO users (id, email) VALUES (?,?)" (n, e)
+    case res of
+        Left (err :: SomeException) -> do
+            logMsg $ "ERROR adding user " ++ show u ++ ": " ++ show err
+            throwError err400
+        Right ()                    -> do
+            logMsg $ "added user " ++ show u
+            return NoContent
+
 usersHandler :: GradingM [User]
-usersHandler = undefined
+usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
 tasksHandler :: GradingM [Task]
 tasksHandler = undefined
 
-uploadHandler :: User -> Task -> ByteString -> GradingM NoContent
-uploadHandler user task bs = do
-    let msg ="upload request from user " ++ show user ++ " for task " ++ show task ++ ": "
+uploadHandler :: UserName -> Task -> ByteString -> GradingM NoContent
+uploadHandler un task bs = do
+    let msg ="upload request from user " ++ show un ++ " for task " ++ show task ++ ": "
     me <- liftIO $ checkArchive bs
     case me of 
         Nothing  -> do
@@ -39,3 +56,24 @@ uploadHandler user task bs = do
         Just err -> do
             logMsg $ msg ++ "ERROR: " ++ show err
             throwError $ err400 {errBody = B.fromString $ show err}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,26 +1,22 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module Grading.API
     ( ByteString
-    , User
-    , Task
     , GradingAPI
     , gradingAPI
     ) where
 
-import Data.ByteString.Lazy (ByteString)
+import Data.ByteString.Lazy             (ByteString)
 import Servant
+
+import Grading.Types
 
 gradingAPI :: Proxy GradingAPI
 gradingAPI = Proxy
 
-type User = String
-
-type Task = Int
-
 type GradingAPI = 
-         "users"  :> Get '[JSON] [User]
+         "user"   :> Capture "user" UserName :> ReqBody '[JSON] EMail :> Put '[JSON] NoContent
+    :<|> "users"  :> Get '[JSON] [User]
     :<|> "tasks"  :> Get '[JSON] [Int]
-    :<|> "upload" :> Capture "user" User :> Capture "task" Task :> ReqBody '[OctetStream] ByteString :> Post '[JSON] NoContent
-
+    :<|> "upload" :> Capture "user" UserName :> Capture "task" Task :> ReqBody '[OctetStream] ByteString :> Post '[JSON] NoContent
