@@ -42,11 +42,11 @@ usersHandler :: GradingM [User]
 usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
 tasksHandler :: GradingM [Task]
-tasksHandler = undefined
+tasksHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM tasks ORDER BY id ASC"
 
-uploadHandler :: UserName -> Task -> ByteString -> GradingM NoContent
-uploadHandler un task bs = do
-    let msg ="upload request from user " ++ show un ++ " for task " ++ show task ++ ": "
+uploadHandler :: UserName -> TaskId -> ByteString -> GradingM NoContent
+uploadHandler un tid bs = do
+    let msg ="upload request from user " ++ show un ++ " for task " ++ show tid ++ ": "
     me <- liftIO $ checkArchive bs
     case me of 
         Nothing  -> do
@@ -56,24 +56,3 @@ uploadHandler un task bs = do
         Just err -> do
             logMsg $ msg ++ "ERROR: " ++ show err
             throwError $ err400 {errBody = B.fromString $ show err}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

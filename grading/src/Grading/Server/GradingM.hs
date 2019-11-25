@@ -30,8 +30,8 @@ initContext = do
     let db = "db"
     withConnection db $ \conn -> do
         execute_ conn "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL)" 
-        execute_ conn "CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, userid TEXT NOT NULL REFERENCES users(id), time TEXT NOT NULL, archive BLOB NOT NULL)"
-
+        execute_ conn "CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, image TEXT UNIQUE NOT NULL)" 
+        execute_ conn "CREATE TABLE IF NOT EXISTS submissions (id INTEGER PRIMARY KEY AUTOINCREMENT, userid TEXT NOT NULL REFERENCES users(id), taskid INTEGER NOT NULL REFERENCES tasks(id), time TEXT NOT NULL, archive BLOB NOT NULL)"
     return $ GC 
         { gcLock = lock
         , gcDB   = db

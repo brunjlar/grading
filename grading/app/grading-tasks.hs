@@ -21,8 +21,8 @@ data Args = Args
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) <- getRecord "Lists all users."
+    Args (Helpful mhost) (Helpful mport) <- getRecord "Lists all tasks."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    xs <- usersIO host' port'
+    xs <- tasksIO host' port'
     forM_ xs print

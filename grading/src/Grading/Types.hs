@@ -7,7 +7,9 @@ module Grading.Types
     ( UserName (..)
     , EMail (..)
     , User (..)
-    , Task
+    , DockerImage (..)
+    , TaskId (..)
+    , Task (..)
     ) where
 
 import Data.Aeson                       (FromJSON, ToJSON)
@@ -33,5 +35,18 @@ data User = User
 instance FromRow User where
     fromRow = User <$> field <*> field
 
-type Task = Int
+newtype DockerImage = DockerImage String
+    deriving stock (Show, Read, Eq, Ord, Generic)
+    deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
+newtype TaskId = TaskId Int
+    deriving stock (Show, Read, Eq, Ord, Generic)
+    deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+
+data Task = Task
+    { taskId    :: TaskId
+    , taskImage :: DockerImage
+    } deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON)
+
+instance FromRow Task where
+    fromRow = Task <$> field <*> field

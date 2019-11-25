@@ -23,7 +23,9 @@ data Args = Args
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful u) (Helpful e) <- getRecord "Adds a user."
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful e) <- getRecord "Adds a user."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    addUserIO host' port' (UserName u) (EMail e)
+        u     = User (UserName n) (EMail e)
+    addUserIO host' port' u
+    putStrLn $ "successfully added user " ++ show u

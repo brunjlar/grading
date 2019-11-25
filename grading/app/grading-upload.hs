@@ -25,10 +25,11 @@ data Args = Args
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful u) (Helpful task') (Helpful folder')
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful tid) (Helpful folder')
         <- getRecord "Uploads a submission to the grading server."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
     printf "uploading submission folder '%s' for task %d to %s:%d for user '%s'"
-        folder' task' host' port' u
-    uploadFolder host' port' (UserName u) task' folder'
+        folder' tid host' port' n
+    uploadIO host' port' (UserName n) (TaskId tid) folder'
+    putStrLn "upload successful"
