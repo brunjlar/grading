@@ -50,7 +50,7 @@ uploadHandler un tid bs = do
     me <- liftIO $ checkArchive bs
     case me of 
         Nothing  -> do
-            res <- liftIO $ submitBS "brunjlar/chains" bs
+            res <- liftIO $ submitBS (DockerImage "brunjlar/chains") bs
             logMsg $ msg ++ "OK: " ++ show res
             return NoContent
         Just err -> do

@@ -10,6 +10,7 @@ module Grading.Types
     , DockerImage (..)
     , TaskId (..)
     , Task (..)
+    , ContainerId (..)
     ) where
 
 import Data.Aeson                       (FromJSON, ToJSON)
@@ -50,3 +51,7 @@ data Task = Task
 
 instance FromRow Task where
     fromRow = Task <$> field <*> field
+
+newtype ContainerId = ContainerId String
+    deriving (Show, Read, Eq, Ord)
+

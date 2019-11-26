@@ -1,7 +1,5 @@
 module Grading.Utils.Docker
-    ( ImageName
-    , ContainerId
-    , ExitCode
+    ( ExitCode
     , runDetachedContainer
     , stopContainer
     , withDetachedContainer
@@ -17,13 +15,10 @@ import           Data.String                (IsString (..))
 import           GHC.IO.Exception           (ExitCode)
 import           System.Process.Typed
 
-type ImageName = String
+import           Grading.Types
 
-newtype ContainerId = ContainerId String
-    deriving (Show, Read, Eq, Ord)
-
-runDetachedContainer :: ImageName -> Maybe FilePath -> IO ContainerId
-runDetachedContainer n workDir = do
+runDetachedContainer :: DockerImage -> Maybe FilePath -> IO ContainerId
+runDetachedContainer (DockerImage n) workDir = do
     let w = case workDir of
                 Nothing -> ""
                 Just d  -> " -w " ++ d
@@ -33,7 +28,7 @@ runDetachedContainer n workDir = do
 stopContainer :: ContainerId -> IO ()
 stopContainer (ContainerId cid) = void $ readProcess_ $ fromString $ "docker stop " ++ cid
 
-withDetachedContainer :: ImageName -> Maybe FilePath -> (ContainerId -> IO a) -> IO a
+withDetachedContainer :: DockerImage -> Maybe FilePath -> (ContainerId -> IO a) -> IO a
 withDetachedContainer n workDir act = bracket
     (runDetachedContainer n workDir)
     stopContainer
