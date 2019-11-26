@@ -23,7 +23,7 @@ toResult extractLog buildLog testLog hlintLog = do
                 let m = case h of
                             "No hints\n" -> Nothing
                             hints        -> Just hints
-                return $ Tested e m
+                return $ Tested $ TestsAndHints e m
             else BuildError <$> readFile buildLog
         else ExtractionError <$> readFile extractLog
     else return FatalError

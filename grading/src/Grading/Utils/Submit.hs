@@ -17,8 +17,8 @@ import           Grading.Utils.Result
 import           Grading.Utils.ToResult
 import           Grading.Types
 
-submit :: DockerImage -> Maybe FilePath -> IO Result
-submit n msubmission = withSystemTempDirectory "temp" $ \fp -> case msubmission of
+submit :: MonadIO m => DockerImage -> Maybe FilePath -> m Result
+submit n msubmission = liftIO $ withSystemTempDirectory "temp" $ \fp -> case msubmission of
     Just s  -> go fp s
     Nothing -> do
         let s = getArchivePath fp
@@ -41,8 +41,8 @@ submit n msubmission = withSystemTempDirectory "temp" $ \fp -> case msubmission 
         void $ copyFromContainer cid "/test/hlint.log" hlintLog
         toResult extractLog buildLog testLog hlintLog 
 
-submitBS :: DockerImage -> ByteString -> IO Result
-submitBS n bs = withSystemTempDirectory "temp" $ \fp -> do
+submitBS :: MonadIO m => DockerImage -> ByteString -> m Result
+submitBS n bs = liftIO $ withSystemTempDirectory "temp" $ \fp -> do
     let s = getArchivePath fp
     B.writeFile s bs
     submit n $ Just s

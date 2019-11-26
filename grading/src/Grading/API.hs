@@ -18,5 +18,6 @@ gradingAPI = Proxy
 type GradingAPI = 
          "user"   :> Capture "user" UserName :> ReqBody '[JSON] EMail :> Put '[JSON] NoContent
     :<|> "users"  :> Get '[JSON] [User]
+    :<|> "task"   :> ReqBody '[JSON] DockerImage :> Post '[JSON] TaskId
     :<|> "tasks"  :> Get '[JSON] [Task]
-    :<|> "upload" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] ByteString :> Post '[JSON] NoContent
+    :<|> "upload" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] ByteString :> Post '[JSON] (SubmissionId, TestsAndHints) 

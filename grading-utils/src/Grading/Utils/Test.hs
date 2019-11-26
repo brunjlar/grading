@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs         #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE GADTs          #-}
+{-# LANGUAGE TupleSections  #-}
 
 module Grading.Utils.Test
     ( TestCase (..)
@@ -12,6 +14,7 @@ module Grading.Utils.Test
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           GHC.Generics    (Generic)
 import           Test.QuickCheck hiding (label, Result (..))
 import qualified Test.QuickCheck as QC
 
@@ -32,7 +35,7 @@ data TestResult =
               , resCases     :: [String]
               , resException :: Maybe String
               }
-    deriving (Show, Read, Eq, Ord)
+    deriving (Show, Read, Eq, Ord, Generic)
 
 testTC :: Int -> TestCase -> IO TestResult
 testTC timeout (TC l prop) = do

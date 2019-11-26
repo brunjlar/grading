@@ -4,6 +4,7 @@ module Grading.Client
     , getPort
     , addUserIO
     , usersIO
+    , addTaskIO
     , tasksIO
     , uploadIO
     ) where
@@ -25,9 +26,10 @@ import Grading.Types
 
 addUser :: UserName -> EMail -> ClientM NoContent
 users   :: ClientM [User]
+addTask :: DockerImage -> ClientM TaskId
 tasks   :: ClientM [Task]
-upload  :: UserName -> TaskId -> ByteString -> ClientM NoContent
-addUser :<|> users :<|> tasks :<|> upload = client gradingAPI
+upload  :: UserName -> TaskId -> ByteString -> ClientM (SubmissionId, TestsAndHints)
+addUser :<|> users :<|> addTask :<|> tasks :<|> upload = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
 clientIO host port c = do
@@ -44,14 +46,17 @@ addUserIO host port u = void $ clientIO host port $ addUser (userName u) (userEM
 usersIO :: String -> Int -> IO [User]
 usersIO host port = clientIO host port users
 
+addTaskIO :: String -> Int -> DockerImage -> IO TaskId
+addTaskIO host port d = clientIO host port $ addTask d
+
 tasksIO :: String -> Int -> IO [Task]
 tasksIO host port = clientIO host port tasks
 
-uploadIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO ()
+uploadIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (SubmissionId, TestsAndHints)
 uploadIO host port n tid fp = do
     nfp <- normFolder fp
     bs  <- compress . write <$> pack nfp ["."]
-    void $ clientIO host port $ upload n tid bs
+    clientIO host port $ upload n tid bs
 
 normFolder :: FilePath -> IO FilePath
 normFolder f = do

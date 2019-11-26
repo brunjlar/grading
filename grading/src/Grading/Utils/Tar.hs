@@ -3,6 +3,7 @@
 module Grading.Utils.Tar
     ( tarFolder
     , checkArchive
+    , checkArchive_
     ) where
 
 import qualified Codec.Archive.Tar       as Tar
@@ -10,12 +11,13 @@ import qualified Codec.Archive.Tar.Check as Tar
 import           Codec.Compression.GZip  (compress, decompress)
 import           Control.Exception       (Exception (..), SomeException (..), throwIO, try)
 import           Control.Monad           (unless)
+import           Control.Monad.IO.Class  (MonadIO (..))
 import           Data.ByteString.Lazy    (ByteString)
 import           Data.Foldable           (asum)
 import           System.Directory        (doesDirectoryExist, makeAbsolute)
 
-tarFolder :: FilePath -> IO ByteString
-tarFolder f = do
+tarFolder :: MonadIO m => FilePath -> m ByteString
+tarFolder f = liftIO $ do
     a  <- normFolder f
     bs <- compress . Tar.write <$> Tar.pack a ["."]
     m  <- checkArchive bs
@@ -23,8 +25,8 @@ tarFolder f = do
         Nothing -> return bs
         Just e  -> throwIO e 
 
-normFolder :: FilePath -> IO FilePath
-normFolder f = do
+normFolder :: MonadIO m => FilePath -> m FilePath
+normFolder f = liftIO $ do
     b <- doesDirectoryExist f
     unless b $ throwIO $ userError $ "folder " ++ show f ++ " does not exists"
     makeAbsolute f
@@ -66,8 +68,8 @@ toEntries = fmap toTarError
           . Tar.read 
           . decompress
 
-checkArchive :: ByteString -> IO (Maybe TarError)
-checkArchive bs = do
+checkArchive :: MonadIO m => ByteString -> m (Maybe TarError)
+checkArchive bs = liftIO $ do
     em <- try $ checkEntries $ toEntries bs
     case em of
         Left (ex :: SomeException) -> return $ Just (DecompressionError $ show ex)
@@ -77,3 +79,10 @@ checkArchive bs = do
     checkEntries (Tar.Next _ es) = checkEntries es
     checkEntries Tar.Done        = return Nothing
     checkEntries (Tar.Fail e)    = return $ Just e
+
+checkArchive_ :: MonadIO m => ByteString -> m ()
+checkArchive_ bs = do
+    me <- checkArchive bs
+    case me of
+        Nothing  -> return ()
+        Just err -> liftIO $ ioError $ userError $ displayException err

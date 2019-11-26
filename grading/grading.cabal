@@ -23,6 +23,7 @@ library
         , bytestring
         , containers
         , directory
+        , direct-sqlite
         , filepath
         , grading-utils
         , http-client
@@ -35,6 +36,7 @@ library
         , servant-server
         , sqlite-simple
         , tar
+        , time
         , typed-process
         , unliftio
         , utf8-string
@@ -43,6 +45,15 @@ library
     hs-source-dirs: src
     default-language: Haskell2010
     ghc-options: -Wall
+
+executable grading-add-task
+  hs-source-dirs:      app
+  main-is:             grading-add-task.hs
+  build-depends:       base >= 4.12 && < 5
+                     , grading
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
 
 executable grading-add-user
   hs-source-dirs:      app
@@ -84,6 +95,7 @@ executable grading-upload
   hs-source-dirs:      app
   main-is:             grading-upload.hs
   build-depends:       base >= 4.12 && < 5
+                     , containers
                      , grading
                      , optparse-generic
   ghc-options:         -Wall -O3

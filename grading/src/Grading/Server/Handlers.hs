@@ -7,22 +7,23 @@ module Grading.Server.Handlers
     ( gradingServerT
     ) where
 
-import           Control.Exception         (try, SomeException)
-import           Data.ByteString.Lazy      (ByteString)
-import qualified Data.ByteString.Lazy.UTF8 as B
-import           Database.SQLite.Simple
-import           Servant
+import Control.Exception       (try, Exception (..), SomeException)
+import Data.ByteString.Lazy    (ByteString)
+import Data.Time.Clock.POSIX   (getCurrentTime)
+import Database.SQLite.Simple
+import Servant
 
-import           Grading.API
-import           Grading.Server.GradingM
-import           Grading.Types
-import           Grading.Utils.Submit      (submitBS)
-import           Grading.Utils.Tar         (checkArchive)
+import Grading.API
+import Grading.Server.GradingM
+import Grading.Types
+import Grading.Utils.Submit    (submitBS)
+import Grading.Utils.Tar       (checkArchive_)
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
          addUserHandler
     :<|> usersHandler
+    :<|> addTaskHandler
     :<|> tasksHandler
     :<|> uploadHandler
 
@@ -41,18 +42,42 @@ addUserHandler n e = do
 usersHandler :: GradingM [User]
 usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
+addTaskHandler :: DockerImage -> GradingM TaskId
+addTaskHandler d = do
+    res <- withDB $ \conn -> liftIO $ try $ do
+        execute conn "INSERT INTO tasks (image) VALUES (?)" (Only d)
+        [Only tid] <- query_ conn "SELECT last_insert_rowid()"
+        return tid 
+    case res of
+        Left (err :: SomeException) -> do
+            logMsg $ "ERROR adding task with image " ++ show d ++ ": " ++ show err
+            throwError err400
+        Right tid                   -> do
+            let t = Task tid d 
+            logMsg $ "added task " ++ show t
+            return tid
+
 tasksHandler :: GradingM [Task]
 tasksHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM tasks ORDER BY id ASC"
 
-uploadHandler :: UserName -> TaskId -> ByteString -> GradingM NoContent
-uploadHandler un tid bs = do
-    let msg ="upload request from user " ++ show un ++ " for task " ++ show tid ++ ": "
-    me <- liftIO $ checkArchive bs
-    case me of 
-        Nothing  -> do
-            res <- liftIO $ submitBS (DockerImage "brunjlar/chains") bs
-            logMsg $ msg ++ "OK: " ++ show res
-            return NoContent
-        Just err -> do
-            logMsg $ msg ++ "ERROR: " ++ show err
-            throwError $ err400 {errBody = B.fromString $ show err}
+uploadHandler :: UserName -> TaskId -> ByteString -> GradingM (SubmissionId, TestsAndHints)
+uploadHandler n tid bs = do
+    let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "
+    e <- withDB $ \conn -> liftIO $ try $ do
+        checkArchive_ bs
+        [Only d] <- query conn "SELECT image FROM tasks WHERE id = ?" (Only tid)
+        res      <- submitBS d bs
+        case res of
+            Tested th -> do
+                now <- getCurrentTime
+                execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, bs, th)
+                [Only sid] <- query_ conn "SELECT last_insert_rowid()"
+                return (sid, th)
+            _         -> ioError $ userError $ show res
+    case e of
+        Left (err :: SomeException) -> do
+            logMsg $ msg ++ "ERROR - " ++ displayException err
+            throwError err400
+        Right x@(sid, _)            -> do
+            logMsg $ msg ++ "OK - created submission " ++ show sid
+            return x

@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: zenc-0.1.1@sha256:e4be3e5e9fe1a1ade05910909c6e5b5a8eff72e697868b03955c9781b0443947,964
+    hackage: haskell-src-exts-1.21.1@sha256:11d18ec3f463185f81b7819376b532e3087f8192cffc629aac5c9eec88897b35,4541
     pantry-tree:
-      size: 206
-      sha256: ac8bdc2a8c4b51c7bfa95802ecbab6879190787c870a9cbe0bfee220b3b2a7fe
+      size: 95170
+      sha256: 487db8defe20a7c8bdf5b4a9a68ec616a4349bdb643f2dc7c9d71e1a6495c8c7
   original:
-    hackage: zenc-0.1.1@sha256:e4be3e5e9fe1a1ade05910909c6e5b5a8eff72e697868b03955c9781b0443947,964
+    hackage: haskell-src-exts-1.21.1@sha256:11d18ec3f463185f81b7819376b532e3087f8192cffc629aac5c9eec88897b35,4541
 snapshots:
 - completed:
     size: 525662
