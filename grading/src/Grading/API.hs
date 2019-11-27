@@ -20,4 +20,4 @@ type GradingAPI =
     :<|> "users"  :> Get '[JSON] [User]
     :<|> "task"   :> ReqBody '[JSON] DockerImage :> Post '[JSON] TaskId
     :<|> "tasks"  :> Get '[JSON] [Task]
-    :<|> "upload" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] ByteString :> Post '[JSON] (SubmissionId, TestsAndHints) 
+    :<|> "upload" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] UncheckedArchive :> Post '[JSON] (SubmissionId, TestsAndHints) 

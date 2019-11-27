@@ -8,7 +8,6 @@ module Grading.Server.Handlers
     ) where
 
 import Control.Exception       (try, Exception (..), SomeException)
-import Data.ByteString.Lazy    (ByteString)
 import Data.Time.Clock.POSIX   (getCurrentTime)
 import Database.SQLite.Simple
 import Servant
@@ -16,7 +15,7 @@ import Servant
 import Grading.API
 import Grading.Server.GradingM
 import Grading.Types
-import Grading.Utils.Submit    (submitBS)
+import Grading.Utils.Submit    (submitArchive)
 import Grading.Utils.Tar       (checkArchive_)
 
 gradingServerT :: ServerT GradingAPI GradingM
@@ -60,17 +59,17 @@ addTaskHandler d = do
 tasksHandler :: GradingM [Task]
 tasksHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM tasks ORDER BY id ASC"
 
-uploadHandler :: UserName -> TaskId -> ByteString -> GradingM (SubmissionId, TestsAndHints)
-uploadHandler n tid bs = do
+uploadHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM (SubmissionId, TestsAndHints)
+uploadHandler n tid unchecked = do
     let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "
     e <- withDB $ \conn -> liftIO $ try $ do
-        checkArchive_ bs
+        checked  <- checkArchive_ unchecked
         [Only d] <- query conn "SELECT image FROM tasks WHERE id = ?" (Only tid)
-        res      <- submitBS d bs
+        res      <- submitArchive d checked
         case res of
             Tested th -> do
                 now <- getCurrentTime
-                execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, bs, th)
+                execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, checked, th)
                 [Only sid] <- query_ conn "SELECT last_insert_rowid()"
                 return (sid, th)
             _         -> ioError $ userError $ show res

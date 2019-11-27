@@ -9,26 +9,25 @@ module Grading.Client
     , uploadIO
     ) where
 
-import Codec.Archive.Tar (pack, write)
+import Codec.Archive.Tar      (pack, write)
 import Codec.Compression.GZip (compress)
-import Control.Exception (throwIO)
-import Control.Monad (unless, void)
-import Data.ByteString.Lazy (ByteString)
-import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Control.Exception      (throwIO)
+import Control.Monad          (unless, void)
+import Network.HTTP.Client    (newManager, defaultManagerSettings)
 import Servant
 import Servant.Client
-import System.Directory (doesDirectoryExist, makeAbsolute)
-import System.IO.Error (userError)
+import System.Directory       (doesDirectoryExist, makeAbsolute)
+import System.IO.Error        (userError)
 
 import Grading.API
-import Grading.Server (getPort)
+import Grading.Server         (getPort)
 import Grading.Types
 
 addUser :: UserName -> EMail -> ClientM NoContent
 users   :: ClientM [User]
 addTask :: DockerImage -> ClientM TaskId
 tasks   :: ClientM [Task]
-upload  :: UserName -> TaskId -> ByteString -> ClientM (SubmissionId, TestsAndHints)
+upload  :: UserName -> TaskId -> UncheckedArchive -> ClientM (SubmissionId, TestsAndHints)
 addUser :<|> users :<|> addTask :<|> tasks :<|> upload = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
@@ -54,9 +53,9 @@ tasksIO host port = clientIO host port tasks
 
 uploadIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (SubmissionId, TestsAndHints)
 uploadIO host port n tid fp = do
-    nfp <- normFolder fp
-    bs  <- compress . write <$> pack nfp ["."]
-    clientIO host port $ upload n tid bs
+    nfp       <- normFolder fp
+    unchecked <- UncheckedArchive . compress . write <$> pack nfp ["."]
+    clientIO host port $ upload n tid unchecked
 
 normFolder :: FilePath -> IO FilePath
 normFolder f = do

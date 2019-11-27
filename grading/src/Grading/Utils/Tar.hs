@@ -1,29 +1,43 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Grading.Utils.Tar
-    ( tarFolder
+    ( CheckedArchive
+    , toBS
+    , tarFolder
     , checkArchive
     , checkArchive_
     ) where
 
-import qualified Codec.Archive.Tar       as Tar
-import qualified Codec.Archive.Tar.Check as Tar
-import           Codec.Compression.GZip  (compress, decompress)
-import           Control.Exception       (Exception (..), SomeException (..), throwIO, try)
-import           Control.Monad           (unless)
-import           Control.Monad.IO.Class  (MonadIO (..))
-import           Data.ByteString.Lazy    (ByteString)
-import           Data.Foldable           (asum)
-import           System.Directory        (doesDirectoryExist, makeAbsolute)
+import qualified Codec.Archive.Tar                as Tar
+import qualified Codec.Archive.Tar.Check          as Tar
+import           Codec.Compression.GZip           (compress, decompress)
+import           Control.Exception                (Exception (..), SomeException (..), throwIO, try)
+import           Control.Monad                    (unless)
+import           Control.Monad.IO.Class           (MonadIO (..))
+import           Data.ByteString.Lazy             (ByteString)
+import           Data.Coerce                      (coerce)
+import           Data.Foldable                    (asum)
+import           Database.SQLite.Simple.FromField (FromField)
+import           Database.SQLite.Simple.ToField   (ToField)
+import           System.Directory                 (doesDirectoryExist, makeAbsolute)
 
-tarFolder :: MonadIO m => FilePath -> m ByteString
+import           Grading.Types
+
+newtype CheckedArchive = CheckedArchive UncheckedArchive
+    deriving (Show, Read, Eq, Ord, FromField, ToField)
+
+toBS :: CheckedArchive -> ByteString
+toBS = coerce
+
+tarFolder :: MonadIO m => FilePath -> m CheckedArchive
 tarFolder f = liftIO $ do
-    a  <- normFolder f
-    bs <- compress . Tar.write <$> Tar.pack a ["."]
-    m  <- checkArchive bs
-    case m of
-        Nothing -> return bs
-        Just e  -> throwIO e 
+    a         <- normFolder f
+    unchecked <- UncheckedArchive . compress . Tar.write <$> Tar.pack a ["."]
+    echecked  <- checkArchive unchecked
+    case echecked of
+        Right checked -> return checked
+        Left e        -> throwIO e 
 
 normFolder :: MonadIO m => FilePath -> m FilePath
 normFolder f = liftIO $ do
@@ -68,21 +82,22 @@ toEntries = fmap toTarError
           . Tar.read 
           . decompress
 
-checkArchive :: MonadIO m => ByteString -> m (Maybe TarError)
-checkArchive bs = liftIO $ do
+checkArchive :: MonadIO m => UncheckedArchive -> m (Either TarError CheckedArchive)
+checkArchive unchecked@(UncheckedArchive bs) = liftIO $ do
     em <- try $ checkEntries $ toEntries bs
-    case em of
-        Left (ex :: SomeException) -> return $ Just (DecompressionError $ show ex)
-        Right m                    -> return m
+    return $ case em of
+        Left (e :: SomeException) -> Left (DecompressionError $ displayException e)
+        Right (Just e)            -> Left e
+        Right Nothing             -> Right $ CheckedArchive unchecked
   where
     checkEntries :: Tar.Entries TarError -> IO (Maybe TarError)
     checkEntries (Tar.Next _ es) = checkEntries es
     checkEntries Tar.Done        = return Nothing
     checkEntries (Tar.Fail e)    = return $ Just e
 
-checkArchive_ :: MonadIO m => ByteString -> m ()
-checkArchive_ bs = do
-    me <- checkArchive bs
-    case me of
-        Nothing  -> return ()
-        Just err -> liftIO $ ioError $ userError $ displayException err
+checkArchive_ :: MonadIO m => UncheckedArchive -> m CheckedArchive
+checkArchive_ unchecked = do
+    echecked <- checkArchive unchecked
+    case echecked of
+        Right checked -> return checked
+        Left e        -> liftIO $ ioError $ userError $ displayException e

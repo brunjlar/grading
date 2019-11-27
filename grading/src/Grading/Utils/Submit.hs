@@ -1,19 +1,19 @@
 module Grading.Utils.Submit
     ( submit
-    , submitBS
+    , submitArchive
     ) where
 
-import           Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy   as B
 import           Pipes
-import qualified Pipes.ByteString      as P
-import           System.Directory      (removeFile)
-import           System.FilePath       ((</>), (<.>))
-import           System.IO             (IOMode (WriteMode), withBinaryFile)
-import           UnliftIO.Temporary    (withSystemTempDirectory)
+import qualified Pipes.ByteString       as P
+import           System.Directory       (removeFile)
+import           System.FilePath        ((</>), (<.>))
+import           System.IO              (IOMode (WriteMode), withBinaryFile)
+import           UnliftIO.Temporary     (withSystemTempDirectory)
 
 import           Grading.Utils.Docker
 import           Grading.Utils.Result
+import           Grading.Utils.Tar      (CheckedArchive, toBS)
 import           Grading.Utils.ToResult
 import           Grading.Types
 
@@ -41,10 +41,10 @@ submit n msubmission = liftIO $ withSystemTempDirectory "temp" $ \fp -> case msu
         void $ copyFromContainer cid "/test/hlint.log" hlintLog
         toResult extractLog buildLog testLog hlintLog 
 
-submitBS :: MonadIO m => DockerImage -> ByteString -> m Result
-submitBS n bs = liftIO $ withSystemTempDirectory "temp" $ \fp -> do
+submitArchive :: MonadIO m => DockerImage -> CheckedArchive -> m Result
+submitArchive n checkedArchive = liftIO $ withSystemTempDirectory "temp" $ \fp -> do
     let s = getArchivePath fp
-    B.writeFile s bs
+    B.writeFile s $ toBS checkedArchive
     submit n $ Just s
 
 getArchivePath :: FilePath -> FilePath

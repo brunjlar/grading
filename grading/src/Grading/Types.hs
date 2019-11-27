@@ -16,9 +16,11 @@ module Grading.Types
     , Task (..)
     , ContainerId (..)
     , SubmissionId (..)
+    , UncheckedArchive (..)
     ) where
 
 import Control.Exception                (ErrorCall (..), SomeException (..))
+import Data.ByteString.Lazy             (ByteString)
 import Data.Proxy                       (Proxy (..))
 import Data.Aeson                       (FromJSON, ToJSON)
 import Data.Typeable                    (Typeable, typeRep)
@@ -72,6 +74,10 @@ newtype ContainerId = ContainerId String
 newtype SubmissionId = SubmissionId Int
     deriving stock (Show, Read, Eq, Ord, Generic)
     deriving newtype (FromJSON, ToJSON, FromField, ToField)
+
+newtype UncheckedArchive = UncheckedArchive ByteString
+    deriving stock (Show, Read, Eq, Ord, Generic)
+    deriving newtype (MimeRender OctetStream, MimeUnrender OctetStream, FromField, ToField)
 
 instance FromJSON TestResult
 instance FromJSON TestsAndHints
