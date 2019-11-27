@@ -20,6 +20,7 @@ library
     build-depends:
           base >= 4.12 && < 5
         , aeson
+        , binary
         , bytestring
         , containers
         , directory
@@ -64,6 +65,15 @@ executable grading-add-user
   ghc-options:         -Wall -O3
   default-language:    Haskell2010
 
+executable grading-get-task
+  hs-source-dirs:      app
+  main-is:             grading-get-task.hs
+  build-depends:       base >= 4.12 && < 5
+                     , grading
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
+
 executable grading-users
   hs-source-dirs:      app
   main-is:             grading-users.hs
@@ -80,15 +90,6 @@ executable grading-server
                      , grading
                      , optparse-generic
   ghc-options:         -Wall -threaded -O3
-  default-language:    Haskell2010
-
-executable grading-tasks
-  hs-source-dirs:      app
-  main-is:             grading-tasks.hs
-  build-depends:       base >= 4.12 && < 5
-                     , grading
-                     , optparse-generic
-  ghc-options:         -Wall -O3
   default-language:    Haskell2010
 
 executable grading-upload

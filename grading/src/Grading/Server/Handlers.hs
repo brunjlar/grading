@@ -16,14 +16,14 @@ import Grading.API
 import Grading.Server.GradingM
 import Grading.Types
 import Grading.Utils.Submit    (submitArchive)
-import Grading.Utils.Tar       (checkArchive_)
+import Grading.Utils.Tar       (CheckedArchive, checkArchive_)
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
          addUserHandler
     :<|> usersHandler
     :<|> addTaskHandler
-    :<|> tasksHandler
+    :<|> getTaskHandler
     :<|> uploadHandler
 
 addUserHandler :: UserName -> EMail -> GradingM NoContent
@@ -41,10 +41,11 @@ addUserHandler n e = do
 usersHandler :: GradingM [User]
 usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
-addTaskHandler :: DockerImage -> GradingM TaskId
-addTaskHandler d = do
+addTaskHandler :: TaskDescription -> GradingM TaskId
+addTaskHandler td = do
+    let d = tdImage td
     res <- withDB $ \conn -> liftIO $ try $ do
-        execute conn "INSERT INTO tasks (image) VALUES (?)" (Only d)
+        execute conn "INSERT INTO tasks (image, archive) VALUES (?,?)" (d, tdArchive td)
         [Only tid] <- query_ conn "SELECT last_insert_rowid()"
         return tid 
     case res of
@@ -52,12 +53,21 @@ addTaskHandler d = do
             logMsg $ "ERROR adding task with image " ++ show d ++ ": " ++ show err
             throwError err400
         Right tid                   -> do
-            let t = Task tid d 
-            logMsg $ "added task " ++ show t
+            logMsg $ "added task " ++ show tid
             return tid
 
-tasksHandler :: GradingM [Task]
-tasksHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM tasks ORDER BY id ASC"
+getTaskHandler :: TaskId -> GradingM CheckedArchive
+getTaskHandler tid = do
+    echecked <- withDB $ \conn -> liftIO $ try $ do
+        [Only a] <- query conn "SELECT archive FROM tasks where id = ?" (Only tid)
+        return a
+    case echecked of
+        Right checked             -> do
+            logMsg $ "downloaded task " ++ show tid
+            return checked
+        Left (e :: SomeException) -> do
+            logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
+            throwError err400
 
 uploadHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM (SubmissionId, TestsAndHints)
 uploadHandler n tid unchecked = do

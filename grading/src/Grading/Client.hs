@@ -1,11 +1,10 @@
 module Grading.Client
     ( User
-    , Task
     , getPort
     , addUserIO
     , usersIO
     , addTaskIO
-    , tasksIO
+    , getTaskIO
     , uploadIO
     ) where
 
@@ -22,13 +21,14 @@ import System.IO.Error        (userError)
 import Grading.API
 import Grading.Server         (getPort)
 import Grading.Types
+import Grading.Utils.Tar      (CheckedArchive)
 
 addUser :: UserName -> EMail -> ClientM NoContent
 users   :: ClientM [User]
-addTask :: DockerImage -> ClientM TaskId
-tasks   :: ClientM [Task]
+addTask :: TaskDescription -> ClientM TaskId
+getTask :: TaskId -> ClientM CheckedArchive
 upload  :: UserName -> TaskId -> UncheckedArchive -> ClientM (SubmissionId, TestsAndHints)
-addUser :<|> users :<|> addTask :<|> tasks :<|> upload = client gradingAPI
+addUser :<|> users :<|> addTask :<|> getTask :<|> upload = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
 clientIO host port c = do
@@ -45,11 +45,11 @@ addUserIO host port u = void $ clientIO host port $ addUser (userName u) (userEM
 usersIO :: String -> Int -> IO [User]
 usersIO host port = clientIO host port users
 
-addTaskIO :: String -> Int -> DockerImage -> IO TaskId
-addTaskIO host port d = clientIO host port $ addTask d
+addTaskIO :: String -> Int -> TaskDescription -> IO TaskId
+addTaskIO host port td = clientIO host port $ addTask td
 
-tasksIO :: String -> Int -> IO [Task]
-tasksIO host port = clientIO host port tasks
+getTaskIO :: String -> Int -> TaskId -> IO CheckedArchive
+getTaskIO host port tid = clientIO host port $ getTask tid
 
 uploadIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (SubmissionId, TestsAndHints)
 uploadIO host port n tid fp = do

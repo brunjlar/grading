@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -13,16 +14,17 @@ module Grading.Types
     , User (..)
     , DockerImage (..)
     , TaskId (..)
-    , Task (..)
+    , TaskDescription (..)
     , ContainerId (..)
     , SubmissionId (..)
     , UncheckedArchive (..)
     ) where
 
 import Control.Exception                (ErrorCall (..), SomeException (..))
+import Data.Aeson                       (FromJSON, ToJSON)
+import Data.Binary                      (Binary (..), decodeOrFail, encode)
 import Data.ByteString.Lazy             (ByteString)
 import Data.Proxy                       (Proxy (..))
-import Data.Aeson                       (FromJSON, ToJSON)
 import Data.Typeable                    (Typeable, typeRep)
 import Database.SQLite.Simple           (field, FromRow (..))
 import Database.SQLite.Simple.FromField (Field, FromField (..))
@@ -53,19 +55,23 @@ instance FromRow User where
 
 newtype DockerImage = DockerImage String
     deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField, Binary)
 
 newtype TaskId = TaskId Int
     deriving stock (Show, Read, Eq, Ord, Generic)
     deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
-data Task = Task
-    { taskId    :: TaskId
-    , taskImage :: DockerImage
-    } deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON)
+data TaskDescription = TaskDescription
+    { tdImage   :: DockerImage
+    , tdArchive :: UncheckedArchive
+    } deriving stock (Show, Read, Eq, Ord, Generic)
+      deriving anyclass (Binary)
 
-instance FromRow Task where
-    fromRow = Task <$> field <*> field
+instance MimeRender OctetStream TaskDescription where
+    mimeRender = mimeRenderBinary
+
+instance MimeUnrender OctetStream TaskDescription where
+    mimeUnrender = mimeUnrenderBinary
 
 newtype ContainerId = ContainerId String
     deriving stock (Show, Read, Eq, Ord, Generic)
@@ -77,7 +83,7 @@ newtype SubmissionId = SubmissionId Int
 
 newtype UncheckedArchive = UncheckedArchive ByteString
     deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (MimeRender OctetStream, MimeUnrender OctetStream, FromField, ToField)
+    deriving newtype (MimeRender OctetStream, MimeUnrender OctetStream, FromField, ToField, Binary)
 
 instance FromJSON TestResult
 instance FromJSON TestsAndHints
@@ -105,3 +111,13 @@ fromFieldRead f = case fromField f of
 
 toFieldShow :: Show a => a -> SQLData
 toFieldShow = toField . show
+
+mimeRenderBinary :: Binary a => Proxy OctetStream -> a -> ByteString
+mimeRenderBinary p = mimeRender p . encode
+
+mimeUnrenderBinary :: Binary a => Proxy OctetStream -> ByteString -> Either String a
+mimeUnrenderBinary p bs = do
+    cs <- mimeUnrender p bs
+    case decodeOrFail cs of
+        Left (_, _, e)   -> Left e
+        Right (_, _, td) -> Right td

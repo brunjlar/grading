@@ -2,9 +2,14 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 
 module Grading.Utils.Tar
-    ( CheckedArchive
+    ( ByteString
+    , CheckedArchive
+    , uncheckedSize
+    , checkedSize
     , toBS
+    , uncheck
     , tarFolder
+    , extractArchive
     , checkArchive
     , checkArchive_
     ) where
@@ -16,19 +21,30 @@ import           Control.Exception                (Exception (..), SomeException
 import           Control.Monad                    (unless)
 import           Control.Monad.IO.Class           (MonadIO (..))
 import           Data.ByteString.Lazy             (ByteString)
+import qualified Data.ByteString.Lazy             as BS
 import           Data.Coerce                      (coerce)
 import           Data.Foldable                    (asum)
 import           Database.SQLite.Simple.FromField (FromField)
 import           Database.SQLite.Simple.ToField   (ToField)
+import           Servant                          (MimeRender, MimeUnrender, OctetStream)
 import           System.Directory                 (doesDirectoryExist, makeAbsolute)
 
 import           Grading.Types
 
 newtype CheckedArchive = CheckedArchive UncheckedArchive
-    deriving (Show, Read, Eq, Ord, FromField, ToField)
+    deriving (Show, Read, Eq, Ord, FromField, ToField, MimeRender OctetStream, MimeUnrender OctetStream)
 
 toBS :: CheckedArchive -> ByteString
 toBS = coerce
+
+uncheck :: CheckedArchive -> UncheckedArchive
+uncheck = coerce
+
+uncheckedSize :: UncheckedArchive -> Int
+uncheckedSize (UncheckedArchive bs) = fromIntegral $ BS.length bs
+
+checkedSize :: CheckedArchive -> Int
+checkedSize = uncheckedSize . uncheck
 
 tarFolder :: MonadIO m => FilePath -> m CheckedArchive
 tarFolder f = liftIO $ do
@@ -38,6 +54,9 @@ tarFolder f = liftIO $ do
     case echecked of
         Right checked -> return checked
         Left e        -> throwIO e 
+
+extractArchive :: MonadIO m => CheckedArchive -> FilePath -> m ()
+extractArchive a f = liftIO $ Tar.unpack f $ Tar.read $ decompress $ toBS a
 
 normFolder :: MonadIO m => FilePath -> m FilePath
 normFolder f = liftIO $ do

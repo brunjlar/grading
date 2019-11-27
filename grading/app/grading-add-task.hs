@@ -13,17 +13,21 @@ import Options.Generic
 
 import Grading.Client
 import Grading.Types
+import Grading.Utils.Tar
 
 data Args = Args
-    { host  :: Maybe String <?> "host"
-    , port  :: Maybe Int    <?> "port"
-    , image :: String       <?> "docker image"
+    { host   :: Maybe String <?> "host"
+    , port   :: Maybe Int    <?> "port"
+    , image  :: String       <?> "docker image"
+    , folder :: FilePath     <?> "task folder"
     } deriving (Show, Generic, ParseRecord)
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful d) <- getRecord "Adds a task."
+    Args (Helpful mhost) (Helpful mport) (Helpful d) (Helpful f) <- getRecord "Adds a task."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    tid <- addTaskIO host' port' $ DockerImage d
+    a   <- uncheck <$> tarFolder f
+    putStrLn $ "created archive (size " ++ show (uncheckedSize a) ++ ")"
+    tid <- addTaskIO host' port' $ TaskDescription (DockerImage d) a
     putStrLn $ "successfully added task with id " ++ show tid
