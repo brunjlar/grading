@@ -24,6 +24,7 @@ gradingServerT =
     :<|> usersHandler
     :<|> addTaskHandler
     :<|> getTaskHandler
+    :<|> getSubmissionHandler
     :<|> uploadHandler
 
 addUserHandler :: UserName -> EMail -> GradingM NoContent
@@ -67,6 +68,19 @@ getTaskHandler tid = do
             return checked
         Left (e :: SomeException) -> do
             logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
+            throwError err400
+
+getSubmissionHandler :: SubmissionId -> GradingM CheckedArchive
+getSubmissionHandler sid = do
+    echecked <- withDB $ \conn -> liftIO $ try $ do
+        [Only a] <- query conn "SELECT archive FROM submissions where id = ?" (Only sid)
+        return a
+    case echecked of
+        Right checked             -> do
+            logMsg $ "downloaded submission " ++ show sid
+            return checked
+        Left (e :: SomeException) -> do
+            logMsg $ "ERROR downloading submission " ++ show sid ++ ": " ++ displayException e
             throwError err400
 
 uploadHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM (SubmissionId, TestsAndHints)

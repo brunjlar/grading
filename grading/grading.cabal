@@ -65,6 +65,15 @@ executable grading-add-user
   ghc-options:         -Wall -O3
   default-language:    Haskell2010
 
+executable grading-get-submission
+  hs-source-dirs:      app
+  main-is:             grading-get-submission.hs
+  build-depends:       base >= 4.12 && < 5
+                     , grading
+                     , optparse-generic
+  ghc-options:         -Wall -O3
+  default-language:    Haskell2010
+
 executable grading-get-task
   hs-source-dirs:      app
   main-is:             grading-get-task.hs

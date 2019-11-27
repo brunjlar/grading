@@ -79,7 +79,7 @@ newtype ContainerId = ContainerId String
 
 newtype SubmissionId = SubmissionId Int
     deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (FromJSON, ToJSON, FromField, ToField)
+    deriving newtype (FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 newtype UncheckedArchive = UncheckedArchive ByteString
     deriving stock (Show, Read, Eq, Ord, Generic)

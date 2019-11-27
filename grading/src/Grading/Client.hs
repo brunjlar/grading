@@ -5,6 +5,7 @@ module Grading.Client
     , usersIO
     , addTaskIO
     , getTaskIO
+    , getSubmissionIO
     , uploadIO
     ) where
 
@@ -23,12 +24,13 @@ import Grading.Server         (getPort)
 import Grading.Types
 import Grading.Utils.Tar      (CheckedArchive)
 
-addUser :: UserName -> EMail -> ClientM NoContent
-users   :: ClientM [User]
-addTask :: TaskDescription -> ClientM TaskId
-getTask :: TaskId -> ClientM CheckedArchive
-upload  :: UserName -> TaskId -> UncheckedArchive -> ClientM (SubmissionId, TestsAndHints)
-addUser :<|> users :<|> addTask :<|> getTask :<|> upload = client gradingAPI
+addUser       :: UserName -> EMail -> ClientM NoContent
+users         :: ClientM [User]
+addTask       :: TaskDescription -> ClientM TaskId
+getTask       :: TaskId -> ClientM CheckedArchive
+getSubmission :: SubmissionId -> ClientM CheckedArchive
+upload        :: UserName -> TaskId -> UncheckedArchive -> ClientM (SubmissionId, TestsAndHints)
+addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> upload = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
 clientIO host port c = do
@@ -50,6 +52,9 @@ addTaskIO host port td = clientIO host port $ addTask td
 
 getTaskIO :: String -> Int -> TaskId -> IO CheckedArchive
 getTaskIO host port tid = clientIO host port $ getTask tid
+
+getSubmissionIO :: String -> Int -> SubmissionId -> IO CheckedArchive
+getSubmissionIO host port sid = clientIO host port $ getSubmission sid
 
 uploadIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (SubmissionId, TestsAndHints)
 uploadIO host port n tid fp = do
