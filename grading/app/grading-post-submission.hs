@@ -8,15 +8,13 @@ module Main
     ( main
     ) where
 
-import           Control.Monad      (forM_)
-import qualified Data.Map.Strict    as M
-import           Data.Maybe         (fromMaybe)
+import           Data.Maybe           (fromMaybe)
 import           Options.Generic
-import           Text.Printf        (printf)
+import           Text.Printf          (printf)
 
 import           Grading.Client
-import           Grading.Submission
 import           Grading.Types
+import           Grading.Utils.Report
 
 data Args = Args
     { host   :: Maybe String <?> "host"
@@ -37,28 +35,5 @@ main = do
 
     sub <- postSubmissionIO host' port' (UserName n) (TaskId tid) folder'
 
-    printf "uploaded submission\n"
-    printf "id: %s\n"   $ show $ subId   sub
-    printf "user: %s\n" $ show $ subUser sub
-    printf "task: %s\n" $ show $ subTask sub
-    printf "time: %s\n" $ show $ subTime sub
-    case subResult sub of
-
-        Tested (TestsAndHints em mh) -> do
-            putStrLn "test results:"
-            case em of
-                Left err -> putStrLn $ "ERROR: " ++ err
-                Right m  -> forM_ (M.toList m) $ \(l, r) -> do
-                    putStr $ l ++ ": "
-                    putStrLn $ case r of
-                        Success         -> "Success"
-                        Failure _ o _ _ -> o
-            case mh of
-                Nothing -> return ()
-                Just h  -> printf "\nhints:\n%s\n" h 
-
-        FatalError -> putStrLn "fatal error"
-
-        ExtractionError e -> putStrLn $ "error during extraction: " ++ e
-
-        BuildError e -> putStrLn $ "build error: " ++ e
+    putStrLn "uploaded submission"
+    reportSubmission sub
