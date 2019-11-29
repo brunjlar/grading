@@ -16,13 +16,13 @@ import GHC.Generics    (Generic)
 import Grading.Utils.Test
 
 data TestsAndHints = TestsAndHints
-    { thTests :: Either String (Map TestLabel TestResult)
-    , thHints :: Maybe String
+    { thTests :: !(Either String (Map TestLabel TestResult))
+    , thHints :: !(Maybe String)
     } deriving (Show, Read, Eq, Ord, Generic, Typeable)
 
 data Result =
       FatalError
-    | ExtractionError String
-    | BuildError String
-    | Tested TestsAndHints
+    | ExtractionError !String
+    | BuildError !String
+    | Tested !TestsAndHints
     deriving (Show, Read, Eq, Ord, Generic, Typeable)

@@ -20,6 +20,7 @@ import           Codec.Compression.GZip           (compress, decompress)
 import           Control.Exception                (Exception (..), SomeException (..), throwIO, try)
 import           Control.Monad                    (unless)
 import           Control.Monad.IO.Class           (MonadIO (..))
+import           Data.Binary                      (Binary)
 import           Data.ByteString.Lazy             (ByteString)
 import qualified Data.ByteString.Lazy             as BS
 import           Data.Coerce                      (coerce)
@@ -32,7 +33,7 @@ import           System.Directory                 (doesDirectoryExist, makeAbsol
 import           Grading.Types
 
 newtype CheckedArchive = CheckedArchive UncheckedArchive
-    deriving (Show, Read, Eq, Ord, FromField, ToField, MimeRender OctetStream, MimeUnrender OctetStream)
+    deriving (Show, Read, Eq, Ord, Binary, FromField, ToField, MimeRender OctetStream, MimeUnrender OctetStream)
 
 toBS :: CheckedArchive -> ByteString
 toBS = coerce

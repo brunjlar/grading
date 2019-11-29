@@ -10,6 +10,7 @@ module Grading.API
 import Data.ByteString.Lazy    (ByteString)
 import Servant               
 
+import Grading.Submission      (Submission)
 import Grading.Types
 import Grading.Utils.Tar
 
@@ -21,8 +22,8 @@ type GradingAPI =
     :<|> "users"      :> Get '[JSON] [User]
     :<|> "task"       :> ReqBody '[OctetStream] TaskDescription :> Post '[JSON] TaskId
     :<|> "task"       :> Capture "task" TaskId :> Get '[OctetStream] CheckedArchive
-    :<|> "submission" :> Capture "submission" SubmissionId :> Get '[OctetStream] CheckedArchive
-    :<|> "upload"     :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] UncheckedArchive :> Post '[JSON] (SubmissionId, TestsAndHints) 
+    :<|> "submission" :> Capture "submission" SubmissionId :> Get '[OctetStream] Submission
+    :<|> "submission" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] UncheckedArchive :> Post '[OctetStream] Submission
 
 
 

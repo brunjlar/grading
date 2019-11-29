@@ -30,10 +30,10 @@ getTestLabel (TCs s _) = s
 
 data TestResult = 
       Success
-    | Failure { resLabels    :: [String]
-              , resOutput    :: String
-              , resCases     :: [String]
-              , resException :: Maybe String
+    | Failure { resLabels    :: ![String]
+              , resOutput    :: !String
+              , resCases     :: ![String]
+              , resException :: !(Maybe String)
               }
     deriving (Show, Read, Eq, Ord, Generic)
 

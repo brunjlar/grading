@@ -14,6 +14,7 @@ import Servant
 
 import Grading.API
 import Grading.Server.GradingM
+import Grading.Submission      (Submission (..))
 import Grading.Types
 import Grading.Utils.Submit    (submitArchive)
 import Grading.Utils.Tar       (CheckedArchive, checkArchive_)
@@ -25,7 +26,7 @@ gradingServerT =
     :<|> addTaskHandler
     :<|> getTaskHandler
     :<|> getSubmissionHandler
-    :<|> uploadHandler
+    :<|> postSubmissionHandler
 
 addUserHandler :: UserName -> EMail -> GradingM NoContent
 addUserHandler n e = do
@@ -70,37 +71,45 @@ getTaskHandler tid = do
             logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
             throwError err400
 
-getSubmissionHandler :: SubmissionId -> GradingM CheckedArchive
+getSubmissionHandler :: SubmissionId -> GradingM Submission
 getSubmissionHandler sid = do
-    echecked <- withDB $ \conn -> liftIO $ try $ do
-        [Only a] <- query conn "SELECT archive FROM submissions where id = ?" (Only sid)
-        return a
-    case echecked of
-        Right checked             -> do
+    esub <- withDB $ \conn -> liftIO $ try $ do
+        [sub] <- query conn "SELECT * FROM submissions where id = ?" (Only sid)
+        return sub
+    case esub of
+        Right sub                 -> do
             logMsg $ "downloaded submission " ++ show sid
-            return checked
+            return sub
         Left (e :: SomeException) -> do
             logMsg $ "ERROR downloading submission " ++ show sid ++ ": " ++ displayException e
             throwError err400
 
-uploadHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM (SubmissionId, TestsAndHints)
-uploadHandler n tid unchecked = do
+postSubmissionHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM Submission
+postSubmissionHandler n tid unchecked = do
     let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "
     e <- withDB $ \conn -> liftIO $ try $ do
         checked  <- checkArchive_ unchecked
         [Only d] <- query conn "SELECT image FROM tasks WHERE id = ?" (Only tid)
         res      <- submitArchive d checked
-        case res of
-            Tested th -> do
-                now <- getCurrentTime
-                execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, checked, th)
-                [Only sid] <- query_ conn "SELECT last_insert_rowid()"
-                return (sid, th)
-            _         -> ioError $ userError $ show res
+        now      <- getCurrentTime
+        let ma  = case res of
+                    Tested _ -> Just checked
+                    _        -> Nothing
+        execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, ma, res)
+        [Only sid] <- query_ conn "SELECT last_insert_rowid()"
+        return (sid, now, res)
     case e of
         Left (err :: SomeException) -> do
             logMsg $ msg ++ "ERROR - " ++ displayException err
             throwError err400
-        Right x@(sid, _)            -> do
+
+        Right (sid, now, res) -> do
             logMsg $ msg ++ "OK - created submission " ++ show sid
-            return x
+            return Submission
+                { subId      = sid
+                , subUser    = n 
+                , subTask    = tid
+                , subTime    = now
+                , subArchive = Nothing
+                , subResult  = res
+                }
