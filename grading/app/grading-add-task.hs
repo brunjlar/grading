@@ -19,15 +19,24 @@ data Args = Args
     { host   :: Maybe String <?> "host"
     , port   :: Maybe Int    <?> "port"
     , image  :: String       <?> "docker image"
-    , folder :: FilePath     <?> "task folder"
+    , task   :: FilePath     <?> "task folder"
+    , sample :: FilePath     <?> "sample solution folder"
     } deriving (Show, Generic, ParseRecord)
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful d) (Helpful f) <- getRecord "Adds a task."
+    Args (Helpful mhost) (Helpful mport) (Helpful d) (Helpful tf) (Helpful sf) <- getRecord "Adds a task."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    a   <- uncheck <$> tarFolder f
-    putStrLn $ "created archive (size " ++ show (uncheckedSize a) ++ ")"
-    tid <- addTaskIO host' port' $ TaskDescription (DockerImage d) a
+    ta <- uncheck <$> tarFolder tf
+    sa <- uncheck <$> tarFolder sf
+    putStrLn $ "created task archive (size " ++ show (archiveSize ta) ++ ")"
+    putStrLn $ "created sample archive (size " ++ show (archiveSize sa) ++ ")"
+    let t = Task
+                { tId     = NotRequired
+                , tImage  = DockerImage d
+                , tTask   = ta
+                , tSample = sa
+                }
+    tid <- addTaskIO host' port' t
     putStrLn $ "successfully added task with id " ++ show tid

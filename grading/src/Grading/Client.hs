@@ -1,3 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Grading.Client
     ( User
     , getPort
@@ -13,7 +17,7 @@ import Codec.Archive.Tar      (pack, write)
 import Codec.Compression.GZip (compress)
 import Control.Exception      (throwIO)
 import Control.Monad          (void)
-import Network.HTTP.Client    (newManager, defaultManagerSettings)
+import Network.HTTP.Client    (newManager, defaultManagerSettings, managerResponseTimeout, responseTimeoutNone)
 import Servant
 import Servant.Client
 import System.IO.Error        (userError)
@@ -22,19 +26,19 @@ import Grading.API
 import Grading.Server         (getPort)
 import Grading.Submission
 import Grading.Types
-import Grading.Utils.Tar      (CheckedArchive, normFolder)
+import Grading.Utils.Tar      (archive, IsChecked (..), normFolder)
 
 addUser        :: UserName -> EMail -> ClientM NoContent
 users          :: ClientM [User]
-addTask        :: TaskDescription -> ClientM TaskId
-getTask        :: TaskId -> ClientM CheckedArchive
-getSubmission  :: SubmissionId -> ClientM Submission
-postSubmission :: UserName -> TaskId -> UncheckedArchive -> ClientM Submission
+addTask        :: Task Unchecked -> ClientM TaskId
+getTask        :: TaskId -> ClientM (Task Checked) 
+getSubmission  :: SubmissionId -> ClientM (Submission Checked)
+postSubmission :: Submission Unchecked -> ClientM (Submission Checked)
 addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
 clientIO host port c = do
-    m <- newManager defaultManagerSettings
+    m <- newManager $ defaultManagerSettings {managerResponseTimeout = responseTimeoutNone}
     let env = mkClientEnv m $ BaseUrl Http host port ""
     res <- runClientM c env
     case res of
@@ -47,17 +51,25 @@ addUserIO host port u = void $ clientIO host port $ addUser (userName u) (userEM
 usersIO :: String -> Int -> IO [User]
 usersIO host port = clientIO host port users
 
-addTaskIO :: String -> Int -> TaskDescription -> IO TaskId
+addTaskIO :: String -> Int -> Task Unchecked -> IO TaskId
 addTaskIO host port td = clientIO host port $ addTask td
 
-getTaskIO :: String -> Int -> TaskId -> IO CheckedArchive
+getTaskIO :: String -> Int -> TaskId -> IO (Task Checked) 
 getTaskIO host port tid = clientIO host port $ getTask tid
 
-getSubmissionIO :: String -> Int -> SubmissionId -> IO Submission
+getSubmissionIO :: String -> Int -> SubmissionId -> IO (Submission Checked)
 getSubmissionIO host port sid = clientIO host port $ getSubmission sid
 
-postSubmissionIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO Submission
+postSubmissionIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (Submission Checked)
 postSubmissionIO host port n tid fp = do
     nfp       <- normFolder fp
-    unchecked <- UncheckedArchive . compress . write <$> pack nfp ["."]
-    clientIO host port $ postSubmission n tid unchecked
+    unchecked <- archive . compress . write <$> pack nfp ["."]
+    let sub = Submission
+                { subId      = NotRequired
+                , subUser    = n
+                , subTask    = tid
+                , subTime    = NotRequired
+                , subArchive = Just unchecked
+                , subResult  = NotRequired
+                }
+    clientIO host port $ postSubmission sub

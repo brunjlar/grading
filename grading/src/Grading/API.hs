@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE TypeOperators              #-}
 
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Grading.API
     ( ByteString
     , GradingAPI
@@ -20,48 +22,7 @@ gradingAPI = Proxy
 type GradingAPI = 
          "user"       :> Capture "user" UserName :> ReqBody '[JSON] EMail :> Put '[JSON] NoContent
     :<|> "users"      :> Get '[JSON] [User]
-    :<|> "task"       :> ReqBody '[OctetStream] TaskDescription :> Post '[JSON] TaskId
-    :<|> "task"       :> Capture "task" TaskId :> Get '[OctetStream] CheckedArchive
-    :<|> "submission" :> Capture "submission" SubmissionId :> Get '[OctetStream] Submission
-    :<|> "submission" :> Capture "user" UserName :> Capture "task" TaskId :> ReqBody '[OctetStream] UncheckedArchive :> Post '[OctetStream] Submission
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    :<|> "task"       :> ReqBody '[OctetStream] (Task Unchecked) :> Post '[JSON] TaskId
+    :<|> "task"       :> Capture "task" TaskId :> Get '[OctetStream] (Task Checked)
+    :<|> "submission" :> Capture "submission" SubmissionId :> Get '[OctetStream] (Submission Checked)
+    :<|> "submission" :> ReqBody '[OctetStream] (Submission Unchecked) :> Post '[OctetStream] (Submission Checked)

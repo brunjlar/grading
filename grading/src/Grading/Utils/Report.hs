@@ -1,3 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs     #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Grading.Utils.Report
     ( reportSubmission
     , reportResult
@@ -8,15 +13,17 @@ import qualified Data.Map.Strict      as M
 import           Text.Printf          (printf)
 
 import           Grading.Submission
+import           Grading.Types        (required)
 import           Grading.Utils.Result
+import           Grading.Utils.Tar    (IsChecked (..))
 
-reportSubmission :: Submission -> IO ()
+reportSubmission :: Submission Checked -> IO ()
 reportSubmission sub = do
     printf "id: %s\n"   $ show $ subId   sub
     printf "user: %s\n" $ show $ subUser sub
     printf "task: %s\n" $ show $ subTask sub
     printf "time: %s\n" $ show $ subTime sub
-    reportResult $ subResult sub
+    reportResult $ required $ subResult sub
 
 reportResult :: Result -> IO ()
 reportResult res = case res of

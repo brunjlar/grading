@@ -1,13 +1,17 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies        #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Grading.Server.Handlers
     ( gradingServerT
     ) where
 
 import Control.Exception         (throwIO, try, Exception (..), SomeException)
+import Data.Maybe                (fromJust)
 import Data.Time.Clock.POSIX     (getCurrentTime)
 import Database.SQLite.Simple
 import Servant
@@ -18,7 +22,7 @@ import Grading.Submission        (Submission (..))
 import Grading.Types
 import Grading.Utils.CheckResult
 import Grading.Utils.Submit      (submitArchive)
-import Grading.Utils.Tar         (CheckedArchive, checkArchive_)
+import Grading.Utils.Tar         (checkArchive_, IsChecked (..))
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
@@ -44,19 +48,28 @@ addUserHandler n e = do
 usersHandler :: GradingM [User]
 usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
-addTaskHandler :: TaskDescription -> GradingM TaskId
-addTaskHandler td = do
-    let d = tdImage td
+addTaskHandler :: Task Unchecked -> GradingM TaskId
+addTaskHandler t = do
+    let d = tImage t
     res <- withDB $ \conn -> liftIO $ try $ do
-        checked <- checkArchive_ $ tdArchive td
-        execute conn "INSERT INTO tasks (image, archive) VALUES (?,?)" (d, checked)
+        checkedTask   <- checkArchive_ $ tTask t
+        checkedSample <- checkArchive_ $ tSample t
+        execute conn "INSERT INTO tasks (image, task, sample) VALUES (?,?,?)" (d, checkedTask, checkedSample)
         [Only tid] <- query_ conn "SELECT last_insert_rowid()"
-        res        <- submitArchive d checked
-        if testedSatisfying allFail res
+        resTask    <- submitArchive d checkedTask
+        resSample  <- submitArchive d checkedSample
+        let taskOK   = testedSatisfying allFail resTask
+            sampleOK = testedSatisfying allPass resSample
+        if taskOK && sampleOK
             then return tid
-            else do 
+            else do
                 execute conn "DELETE FROM tasks WHERE id = ?" (Only tid)
-                throwIO $ userError $ "expected all tests to run and fail, but got: " ++ show res
+                let errTask   = "expected all tests for task to run and fail, but got " ++ show resTask
+                    errSample = "expected all tests for sample to run and pass, but got " ++ show resSample
+                    err       = if taskOK then errSample
+                                          else if sampleOK then errTask
+                                                           else errTask ++ ", " ++ errSample
+                throwIO $ userError err
     case res of
         Left (err :: SomeException) -> do
             logMsg $ "ERROR adding task with image " ++ show d ++ ": " ++ show err
@@ -65,20 +78,20 @@ addTaskHandler td = do
             logMsg $ "added task " ++ show tid
             return tid
 
-getTaskHandler :: TaskId -> GradingM CheckedArchive
+getTaskHandler :: TaskId -> GradingM (Task Checked)
 getTaskHandler tid = do
-    echecked <- withDB $ \conn -> liftIO $ try $ do
-        [Only a] <- query conn "SELECT archive FROM tasks where id = ?" (Only tid)
-        return a
-    case echecked of
-        Right checked             -> do
+    etask <- withDB $ \conn -> liftIO $ try $ do
+        [t] <- query conn "SELECT * FROM tasks where id = ?" (Only tid)
+        return t
+    case etask of
+        Right task                -> do
             logMsg $ "downloaded task " ++ show tid
-            return checked
+            return task
         Left (e :: SomeException) -> do
             logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
             throwError err400
 
-getSubmissionHandler :: SubmissionId -> GradingM Submission
+getSubmissionHandler :: SubmissionId -> GradingM (Submission Checked)
 getSubmissionHandler sid = do
     esub <- withDB $ \conn -> liftIO $ try $ do
         [sub] <- query conn "SELECT * FROM submissions where id = ?" (Only sid)
@@ -91,11 +104,13 @@ getSubmissionHandler sid = do
             logMsg $ "ERROR downloading submission " ++ show sid ++ ": " ++ displayException e
             throwError err400
 
-postSubmissionHandler :: UserName -> TaskId -> UncheckedArchive -> GradingM Submission
-postSubmissionHandler n tid unchecked = do
+postSubmissionHandler :: Submission Unchecked -> GradingM (Submission Checked)
+postSubmissionHandler sub = do
+    let n   = subUser sub
+        tid = subTask sub
     let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "
     e <- withDB $ \conn -> liftIO $ try $ do
-        checked  <- checkArchive_ unchecked
+        checked  <- checkArchive_ $ fromJust $ subArchive sub
         [Only d] <- query conn "SELECT image FROM tasks WHERE id = ?" (Only tid)
         res      <- submitArchive d checked
         now      <- getCurrentTime
@@ -116,7 +131,7 @@ postSubmissionHandler n tid unchecked = do
                 { subId      = sid
                 , subUser    = n 
                 , subTask    = tid
-                , subTime    = now
+                , subTime    = Required now
                 , subArchive = Nothing
-                , subResult  = res
+                , subResult  = Required res
                 }

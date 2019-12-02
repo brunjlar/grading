@@ -1,11 +1,17 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans                        #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Grading.Types
     ( module Grading.Utils.Result
@@ -13,11 +19,12 @@ module Grading.Types
     , EMail (..)
     , User (..)
     , DockerImage (..)
+    , Require (..)
+    , required
     , TaskId (..)
-    , TaskDescription (..)
+    , Task (..)
     , ContainerId (..)
     , SubmissionId (..)
-    , UncheckedArchive (..)
     , mimeRenderBinary
     , mimeUnrenderBinary
     ) where
@@ -27,6 +34,7 @@ import           Data.Aeson                       (FromJSON, ToJSON)
 import           Data.Binary                      (Binary (..), decodeOrFail, encode)
 import qualified Data.Binary                      as B
 import           Data.ByteString.Lazy             (ByteString)
+import           Data.Kind                        (Type)
 import           Data.Proxy                       (Proxy (..))
 import           Data.Time                        (UTCTime)
 import           Data.Typeable                    (Typeable, typeRep)
@@ -40,6 +48,7 @@ import           Servant
 import           Text.Read                        (readMaybe)
 
 import           Grading.Utils.Result
+import           Grading.Utils.Tar
 
 newtype UserName = UserName String
     deriving stock (Show, Read, Eq, Ord, Generic)
@@ -65,16 +74,63 @@ newtype TaskId = TaskId Int
     deriving stock (Show, Read, Eq, Ord, Generic)
     deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
-data TaskDescription = TaskDescription
-    { tdImage   :: !DockerImage
-    , tdArchive :: !UncheckedArchive
-    } deriving stock (Show, Read, Eq, Ord, Generic)
-      deriving anyclass (Binary)
+data Require (c :: IsChecked) (a :: Type) :: Type where
+    NotRequired :: Require Unchecked a
+    Required    :: a -> Require Checked a
 
-instance MimeRender OctetStream TaskDescription where
+required :: Require Checked a -> a
+required (Required a) = a
+
+deriving instance Show a => Show (Require c a)
+deriving instance Eq a => Eq (Require c a)
+deriving instance Ord a => Ord (Require c a)
+
+instance Read (Require Unchecked a) where
+    readsPrec _ s = case take 11 s of
+        "NotRequired" -> [(NotRequired, drop 11 s)]
+        _             -> []
+
+instance Read a => Read (Require Checked a) where
+    readsPrec d = readParen (d > 10) $ \s ->
+        [(Required a, u) | ("Required", t) <- lex s,
+                           (a, u) <- readsPrec 11 t]
+
+instance Binary a => Binary (Require Checked a) where
+    put (Required a) = put a
+    get = Required <$> get
+
+instance Binary a => Binary (Require Unchecked a) where
+    put NotRequired = return ()
+    get = return NotRequired
+
+instance FromField a => FromField (Require Checked a) where
+    fromField = fmap Required . fromField
+
+data Task (c :: IsChecked) = Task
+    { tId     :: !(Require c TaskId)
+    , tImage  :: !DockerImage
+    , tTask   :: !(Archive c)
+    , tSample :: !(Archive c)
+    } deriving stock (Show, Eq, Ord, Generic)
+
+deriving instance Read (Task Unchecked)
+deriving instance Read (Task Checked)
+deriving instance Binary (Task Unchecked)
+deriving instance Binary (Task Checked)
+
+instance FromRow (Task Checked) where
+    fromRow = Task <$> field <*> field <*> field <*> field
+
+instance MimeRender OctetStream (Task Unchecked) where
     mimeRender = mimeRenderBinary
 
-instance MimeUnrender OctetStream TaskDescription where
+instance MimeRender OctetStream (Task Checked) where
+    mimeRender = mimeRenderBinary
+
+instance MimeUnrender OctetStream (Task Unchecked) where
+    mimeUnrender = mimeUnrenderBinary
+
+instance MimeUnrender OctetStream (Task Checked) where
     mimeUnrender = mimeUnrenderBinary
 
 newtype ContainerId = ContainerId String
@@ -84,10 +140,6 @@ newtype ContainerId = ContainerId String
 newtype SubmissionId = SubmissionId Int
     deriving stock (Show, Read, Eq, Ord, Generic)
     deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
-
-newtype UncheckedArchive = UncheckedArchive ByteString
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (MimeRender OctetStream, MimeUnrender OctetStream, FromField, ToField, Binary)
 
 instance FromJSON TestResult
 instance FromJSON TestsAndHints

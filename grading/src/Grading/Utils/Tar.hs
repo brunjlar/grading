@@ -1,12 +1,19 @@
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Grading.Utils.Tar
     ( ByteString
-    , CheckedArchive
-    , uncheckedSize
-    , checkedSize
-    , toBS
+    , IsChecked (..)
+    , Archive
+    , archive
+    , archivedBytes
+    , archiveSize
     , uncheck
     , tarFolder
     , extractArchive
@@ -28,37 +35,38 @@ import           Data.Coerce                      (coerce)
 import           Data.Foldable                    (asum)
 import           Database.SQLite.Simple.FromField (FromField)
 import           Database.SQLite.Simple.ToField   (ToField)
+import           GHC.Generics                     (Generic)
 import           Servant                          (MimeRender, MimeUnrender, OctetStream)
 import           System.Directory                 (doesDirectoryExist, makeAbsolute)
 
-import           Grading.Types
+data IsChecked = Checked | Unchecked
 
-newtype CheckedArchive = CheckedArchive UncheckedArchive
-    deriving (Show, Read, Eq, Ord, Binary, FromField, ToField, MimeRender OctetStream, MimeUnrender OctetStream)
+newtype Archive (c :: IsChecked) = Archive ByteString
+    deriving stock (Show, Read, Eq, Ord, Generic)
+    deriving newtype (MimeRender OctetStream, MimeUnrender OctetStream, FromField, ToField, Binary)
 
-toBS :: CheckedArchive -> ByteString
-toBS = coerce
+archive :: ByteString -> Archive Unchecked
+archive = Archive
 
-uncheck :: CheckedArchive -> UncheckedArchive
+archivedBytes :: Archive c -> ByteString
+archivedBytes = coerce
+
+uncheck :: Archive Checked -> Archive Unchecked
 uncheck = coerce
 
-uncheckedSize :: UncheckedArchive -> Int
-uncheckedSize (UncheckedArchive bs) = fromIntegral $ BS.length bs
-
-checkedSize :: CheckedArchive -> Int
-checkedSize = uncheckedSize . uncheck
-
-tarFolder :: MonadIO m => FilePath -> m CheckedArchive
+archiveSize :: Archive c -> Int
+archiveSize = fromIntegral . BS.length . archivedBytes
+tarFolder :: MonadIO m => FilePath -> m (Archive Checked)
 tarFolder f = liftIO $ do
     a         <- normFolder f
-    unchecked <- UncheckedArchive . compress . Tar.write <$> Tar.pack a ["."]
+    unchecked <- archive . compress . Tar.write <$> Tar.pack a ["."]
     echecked  <- checkArchive unchecked
     case echecked of
         Right checked -> return checked
         Left e        -> throwIO e 
 
-extractArchive :: MonadIO m => CheckedArchive -> FilePath -> m ()
-extractArchive a f = liftIO $ Tar.unpack f $ Tar.read $ decompress $ toBS a
+extractArchive :: MonadIO m => Archive Checked -> FilePath -> m ()
+extractArchive a f = liftIO $ Tar.unpack f $ Tar.read $ decompress $ archivedBytes a
 
 normFolder :: MonadIO m => FilePath -> m FilePath
 normFolder f = liftIO $ do
@@ -103,20 +111,20 @@ toEntries = fmap toTarError
           . Tar.read 
           . decompress
 
-checkArchive :: MonadIO m => UncheckedArchive -> m (Either TarError CheckedArchive)
-checkArchive unchecked@(UncheckedArchive bs) = liftIO $ do
-    em <- try $ checkEntries $ toEntries bs
+checkArchive :: MonadIO m => Archive Unchecked -> m (Either TarError (Archive Checked))
+checkArchive unchecked = liftIO $ do
+    em <- try $ checkEntries $ toEntries $ archivedBytes unchecked
     return $ case em of
         Left (e :: SomeException) -> Left (DecompressionError $ displayException e)
         Right (Just e)            -> Left e
-        Right Nothing             -> Right $ CheckedArchive unchecked
+        Right Nothing             -> Right (coerce unchecked)
   where
     checkEntries :: Tar.Entries TarError -> IO (Maybe TarError)
     checkEntries (Tar.Next _ es) = checkEntries es
     checkEntries Tar.Done        = return Nothing
     checkEntries (Tar.Fail e)    = return $ Just e
 
-checkArchive_ :: MonadIO m => UncheckedArchive -> m CheckedArchive
+checkArchive_ :: MonadIO m => (Archive Unchecked) -> m (Archive Checked)
 checkArchive_ unchecked = do
     echecked <- checkArchive unchecked
     case echecked of

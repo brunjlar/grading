@@ -1,3 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Grading.Utils.Submit
     ( submit
     , submitArchive
@@ -13,7 +17,7 @@ import           UnliftIO.Temporary     (withSystemTempDirectory)
 
 import           Grading.Utils.Docker
 import           Grading.Utils.Result
-import           Grading.Utils.Tar      (CheckedArchive, toBS)
+import           Grading.Utils.Tar      (archivedBytes, Archive, IsChecked (..))
 import           Grading.Utils.ToResult
 import           Grading.Types
 
@@ -41,10 +45,10 @@ submit n msubmission = liftIO $ withSystemTempDirectory "temp" $ \fp -> case msu
         void $ copyFromContainer cid "/test/hlint.log" hlintLog
         toResult extractLog buildLog testLog hlintLog 
 
-submitArchive :: MonadIO m => DockerImage -> CheckedArchive -> m Result
+submitArchive :: MonadIO m => DockerImage -> Archive Checked -> m Result
 submitArchive n checkedArchive = liftIO $ withSystemTempDirectory "temp" $ \fp -> do
     let s = getArchivePath fp
-    B.writeFile s $ toBS checkedArchive
+    B.writeFile s $ archivedBytes checkedArchive
     submit n $ Just s
 
 getArchivePath :: FilePath -> FilePath

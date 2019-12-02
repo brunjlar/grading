@@ -1,6 +1,12 @@
+{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Grading.Submission
     ( Submission (..)
@@ -13,22 +19,33 @@ import GHC.Generics           (Generic)
 import Servant
 
 import Grading.Types
-import Grading.Utils.Tar      (CheckedArchive)
+import Grading.Utils.Tar      (Archive, IsChecked (..))
 
-data Submission = Submission
-    { subId      :: !SubmissionId
+data Submission (c :: IsChecked) = Submission
+    { subId      :: !(Require c SubmissionId)
     , subUser    :: !UserName
     , subTask    :: !TaskId
-    , subTime    :: !UTCTime
-    , subArchive :: !(Maybe CheckedArchive)
-    , subResult  :: !Result
-    } deriving (Show, Read, Eq, Ord, Generic, Binary)
+    , subTime    :: !(Require c UTCTime)
+    , subArchive :: !(Maybe (Archive c))
+    , subResult  :: !(Require c Result)
+    } deriving (Show, Eq, Ord, Generic)
 
-instance FromRow Submission where
+deriving instance Read (Submission Unchecked)
+deriving instance Read (Submission Checked)
+deriving instance Binary (Submission Unchecked)
+deriving instance Binary (Submission Checked)
+
+instance FromRow (Submission Checked) where
     fromRow = (\(sid, n, tid, t, ma, r) -> Submission sid n tid t ma r) <$> fromRow
 
-instance MimeRender OctetStream Submission where
+instance MimeRender OctetStream (Submission Unchecked) where
     mimeRender = mimeRenderBinary
 
-instance MimeUnrender OctetStream Submission where
+instance MimeRender OctetStream (Submission Checked) where
+    mimeRender = mimeRenderBinary
+
+instance MimeUnrender OctetStream (Submission Unchecked) where
+    mimeUnrender = mimeUnrenderBinary
+
+instance MimeUnrender OctetStream (Submission Checked) where
     mimeUnrender = mimeUnrenderBinary
