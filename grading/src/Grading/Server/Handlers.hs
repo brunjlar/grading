@@ -7,17 +7,18 @@ module Grading.Server.Handlers
     ( gradingServerT
     ) where
 
-import Control.Exception       (try, Exception (..), SomeException)
-import Data.Time.Clock.POSIX   (getCurrentTime)
+import Control.Exception         (throwIO, try, Exception (..), SomeException)
+import Data.Time.Clock.POSIX     (getCurrentTime)
 import Database.SQLite.Simple
 import Servant
 
 import Grading.API
 import Grading.Server.GradingM
-import Grading.Submission      (Submission (..))
+import Grading.Submission        (Submission (..))
 import Grading.Types
-import Grading.Utils.Submit    (submitArchive)
-import Grading.Utils.Tar       (CheckedArchive, checkArchive_)
+import Grading.Utils.CheckResult
+import Grading.Utils.Submit      (submitArchive)
+import Grading.Utils.Tar         (CheckedArchive, checkArchive_)
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
@@ -50,7 +51,12 @@ addTaskHandler td = do
         checked <- checkArchive_ $ tdArchive td
         execute conn "INSERT INTO tasks (image, archive) VALUES (?,?)" (d, checked)
         [Only tid] <- query_ conn "SELECT last_insert_rowid()"
-        return tid 
+        res        <- submitArchive d checked
+        if testedSatisfying allFail res
+            then return tid
+            else do 
+                execute conn "DELETE FROM tasks WHERE id = ?" (Only tid)
+                throwIO $ userError $ "expected all tests to run and fail, but got: " ++ show res
     case res of
         Left (err :: SomeException) -> do
             logMsg $ "ERROR adding task with image " ++ show d ++ ": " ++ show err

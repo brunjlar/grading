@@ -1,5 +1,6 @@
 module Grading.Utils.Report
     ( reportSubmission
+    , reportResult
     ) where
 
 import           Control.Monad        (forM_)
@@ -15,23 +16,26 @@ reportSubmission sub = do
     printf "user: %s\n" $ show $ subUser sub
     printf "task: %s\n" $ show $ subTask sub
     printf "time: %s\n" $ show $ subTime sub
-    case subResult sub of
+    reportResult $ subResult sub
 
-        Tested (TestsAndHints em mh) -> do
-            putStrLn "test results:"
-            case em of
-                Left err -> putStrLn $ "ERROR: " ++ err
-                Right m  -> forM_ (M.toList m) $ \(l, r) -> do
-                    putStr $ l ++ ": "
-                    putStrLn $ case r of
-                        Success         -> "Success"
-                        Failure _ o _ _ -> o
-            case mh of
-                Nothing -> return ()
-                Just h  -> printf "\nhints:\n%s\n" h 
+reportResult :: Result -> IO ()
+reportResult res = case res of
 
-        FatalError -> putStrLn "fatal error"
+    Tested (TestsAndHints em mh) -> do
+        putStrLn "test results:"
+        case em of
+            Left err -> putStrLn $ "ERROR: " ++ err
+            Right m  -> forM_ (M.toList m) $ \(l, r) -> do
+                putStr $ l ++ ": "
+                putStrLn $ case r of
+                    Success         -> "Success"
+                    Failure _ o _ _ -> o
+        case mh of
+            Nothing -> return ()
+            Just h  -> printf "\nhints:\n%s\n" h 
 
-        ExtractionError e -> printf "error during extraction:\n%s\n" e
+    FatalError -> putStrLn "fatal error"
 
-        BuildError e -> printf "build error:\n%s\n" e
+    ExtractionError e -> printf "error during extraction:\n%s\n" e
+
+    BuildError e -> printf "build error:\n%s\n" e

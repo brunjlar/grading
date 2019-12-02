@@ -15,6 +15,7 @@ library
         , Grading.Server.Handlers
         , Grading.Submission
         , Grading.Types
+        , Grading.Utils.CheckResult
         , Grading.Utils.Report
         , Grading.Utils.Submit
         , Grading.Utils.Tar
