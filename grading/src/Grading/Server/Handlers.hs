@@ -47,7 +47,8 @@ addTaskHandler :: TaskDescription -> GradingM TaskId
 addTaskHandler td = do
     let d = tdImage td
     res <- withDB $ \conn -> liftIO $ try $ do
-        execute conn "INSERT INTO tasks (image, archive) VALUES (?,?)" (d, tdArchive td)
+        checked <- checkArchive_ $ tdArchive td
+        execute conn "INSERT INTO tasks (image, archive) VALUES (?,?)" (d, checked)
         [Only tid] <- query_ conn "SELECT last_insert_rowid()"
         return tid 
     case res of

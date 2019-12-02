@@ -12,18 +12,17 @@ module Grading.Client
 import Codec.Archive.Tar      (pack, write)
 import Codec.Compression.GZip (compress)
 import Control.Exception      (throwIO)
-import Control.Monad          (unless, void)
+import Control.Monad          (void)
 import Network.HTTP.Client    (newManager, defaultManagerSettings)
 import Servant
 import Servant.Client
-import System.Directory       (doesDirectoryExist, makeAbsolute)
 import System.IO.Error        (userError)
 
 import Grading.API
 import Grading.Server         (getPort)
 import Grading.Submission
 import Grading.Types
-import Grading.Utils.Tar      (CheckedArchive)
+import Grading.Utils.Tar      (CheckedArchive, normFolder)
 
 addUser        :: UserName -> EMail -> ClientM NoContent
 users          :: ClientM [User]
@@ -62,9 +61,3 @@ postSubmissionIO host port n tid fp = do
     nfp       <- normFolder fp
     unchecked <- UncheckedArchive . compress . write <$> pack nfp ["."]
     clientIO host port $ postSubmission n tid unchecked
-
-normFolder :: FilePath -> IO FilePath
-normFolder f = do
-    b <- doesDirectoryExist f
-    unless b $ throwIO $ userError $ "folder " ++ show f ++ " does not exists"
-    makeAbsolute f

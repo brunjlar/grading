@@ -10,6 +10,7 @@ module Grading.Utils.Tar
     , uncheck
     , tarFolder
     , extractArchive
+    , normFolder
     , checkArchive
     , checkArchive_
     ) where
