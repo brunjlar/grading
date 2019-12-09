@@ -17,6 +17,7 @@ module Grading.Types
     ( module Grading.Utils.Result
     , UserName (..)
     , EMail (..)
+    , Role (..)
     , User (..)
     , DockerImage (..)
     , Require (..)
@@ -64,19 +65,31 @@ newtype EMail = EMail String
     deriving stock (Show, Read, Eq, Ord, Generic)
     deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
+data Role = Student | Admin
+    deriving stock (Show, Read, Eq, Ord, Generic, Typeable)
+    deriving anyclass (Binary, FromJSON, ToJSON)
+
+instance FromField Role where
+    fromField = fromFieldRead
+
+instance ToField Role where
+    toField = toFieldShow
+
 data User = User 
     { userName  :: !UserName
     , userEMail :: !EMail
+    , userRole  :: !Role
     , userSalt  :: !Salt
     , userHash  :: !Hash
     } deriving (Show, Read, Eq, Ord, Generic, Binary, FromJSON, ToJSON)
 
 instance FromRow User where
-    fromRow = User <$> field <*> field <*> field <*> field
+    fromRow = User <$> field <*> field <*> field <*> field <*> field
 
 instance ToRow User where
     toRow u = [ toField $ userName u
               , toField $ userEMail u
+              , toField $ userRole u
               , toField $ userSalt u
               , toField $ userHash u
               ]

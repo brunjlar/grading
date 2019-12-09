@@ -37,9 +37,11 @@ gradingServerT =
 addUserHandler :: UserName -> (EMail, Password) -> GradingM NoContent
 addUserHandler n (e, pw) = do
     s <- salt
+    b <- isAdmin n
     let h = hash pw s
-        u = User n e s h
-    res <- withDB $ \conn -> liftIO $ try $ execute conn "INSERT INTO users (id, email, salt, hash) VALUES (?, ?, ?, ?)" u
+        r = if b then Admin else Student
+        u = User n e r s h
+    res <- withDB $ \conn -> liftIO $ try $ execute conn "INSERT INTO users (id, email, role, salt, hash) VALUES (?, ?, ?, ?, ?)" u
     case res of
         Left (err :: SomeException) -> do
             logMsg $ "ERROR adding user " ++ show u ++ ": " ++ show err
