@@ -21,8 +21,8 @@ gradingAPI = Proxy
 
 type GradingAPI = 
                                             "user"       :> Capture "user" UserName :> ReqBody '[JSON] (EMail, Password) :> Put '[JSON] NoContent
-    :<|>                                    "users"      :> Get '[JSON] [User]
-    :<|>                                    "task"       :> ReqBody '[OctetStream] (Task Unchecked) :> Post '[JSON] TaskId
-    :<|>                                    "task"       :> Capture "task" TaskId :> Get '[OctetStream] (Task Checked)
+    :<|> BasicAuth "admin" Administrator :> "users"      :> Get '[JSON] [User]
+    :<|> BasicAuth "admin" Administrator :> "task"       :> ReqBody '[OctetStream] (Task Unchecked) :> Post '[JSON] TaskId
+    :<|> BasicAuth "admin" Administrator :> "task"       :> Capture "task" TaskId :> Get '[OctetStream] (Task Checked)
     :<|> BasicAuth "admin" Administrator :> "submission" :> Capture "submission" SubmissionId :> Get '[OctetStream] (Submission Checked)
-    :<|>                                    "submission" :> ReqBody '[OctetStream] (Submission Unchecked) :> Post '[OctetStream] (Submission Checked)
+    :<|> BasicAuth "user"  User          :> "submission" :> ReqBody '[OctetStream] (Submission Unchecked) :> Post '[OctetStream] (Submission Checked)

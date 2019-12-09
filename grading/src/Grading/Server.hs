@@ -18,7 +18,7 @@ import Grading.API
 import Grading.Server.GradingM
 import Grading.Server.Handlers
 import Grading.Types
-import Grading.Utils.Auth       (checkAdmin)
+import Grading.Utils.Auth       (checkAdmin, checkUser)
 
 defaultPort :: Port
 defaultPort = 8080
@@ -40,7 +40,7 @@ serveGrading mport madmins = do
 gradingAppT :: GC -> Application
 gradingAppT gc = serveWithContext gradingAPI ctx $ gradingServer gc
   where
-    ctx = checkAdmin gc :. EmptyContext
+    ctx = checkUser gc :. checkAdmin gc :. EmptyContext
 
 gradingServer :: GC -> Server GradingAPI
-gradingServer gc = hoistServerWithContext gradingAPI (Proxy :: Proxy '[BasicAuthCheck Administrator]) (runGradingM gc) gradingServerT
+gradingServer gc = hoistServerWithContext gradingAPI (Proxy :: Proxy '[BasicAuthCheck User, BasicAuthCheck Administrator]) (runGradingM gc) gradingServerT

@@ -30,11 +30,11 @@ import Grading.Utils.Auth
 import Grading.Utils.Tar      (archive, IsChecked (..), normFolder)
 
 addUser        :: UserName -> (EMail, Password) -> ClientM NoContent
-users          :: ClientM [User]
-addTask        :: Task Unchecked -> ClientM TaskId
-getTask        :: TaskId -> ClientM (Task Checked) 
+users          :: BasicAuthData -> ClientM [User]
+addTask        :: BasicAuthData -> Task Unchecked -> ClientM TaskId
+getTask        :: BasicAuthData -> TaskId -> ClientM (Task Checked) 
 getSubmission  :: BasicAuthData -> SubmissionId -> ClientM (Submission Checked)
-postSubmission :: Submission Unchecked -> ClientM (Submission Checked)
+postSubmission :: BasicAuthData -> Submission Unchecked -> ClientM (Submission Checked)
 addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
@@ -49,20 +49,20 @@ clientIO host port c = do
 addUserIO :: String -> Int -> UserName -> EMail -> Password -> IO ()
 addUserIO host port n e pw = void $ clientIO host port $ addUser n (e, pw) 
 
-usersIO :: String -> Int -> IO [User]
-usersIO host port = clientIO host port users
+usersIO :: String -> Int -> UserName -> Password -> IO [User]
+usersIO host port n pw = clientIO host port $ users $ toAuthData n pw
 
-addTaskIO :: String -> Int -> Task Unchecked -> IO TaskId
-addTaskIO host port td = clientIO host port $ addTask td
+addTaskIO :: String -> Int -> UserName -> Password -> Task Unchecked -> IO TaskId
+addTaskIO host port n pw td = clientIO host port $ addTask (toAuthData n pw) td
 
-getTaskIO :: String -> Int -> TaskId -> IO (Task Checked) 
-getTaskIO host port tid = clientIO host port $ getTask tid
+getTaskIO :: String -> Int -> UserName -> Password -> TaskId -> IO (Task Checked) 
+getTaskIO host port n pw tid = clientIO host port $ getTask (toAuthData n pw) tid
 
 getSubmissionIO :: String -> Int -> UserName -> Password -> SubmissionId -> IO (Submission Checked)
 getSubmissionIO host port n pw sid = clientIO host port $ getSubmission (toAuthData n pw) sid
 
-postSubmissionIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (Submission Checked)
-postSubmissionIO host port n tid fp = do
+postSubmissionIO :: String -> Int -> UserName -> Password -> TaskId -> FilePath -> IO (Submission Checked)
+postSubmissionIO host port n pw tid fp = do
     nfp       <- normFolder fp
     unchecked <- archive . compress . write <$> pack nfp ["."]
     let sub = Submission
@@ -73,4 +73,4 @@ postSubmissionIO host port n tid fp = do
                 , subArchive = Just unchecked
                 , subResult  = NotRequired
                 }
-    clientIO host port $ postSubmission sub
+    clientIO host port $ postSubmission (toAuthData n pw) sub

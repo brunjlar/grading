@@ -13,16 +13,19 @@ import Data.Maybe      (fromMaybe)
 import Options.Generic
 
 import Grading.Client
+import Grading.Types
 
 data Args = Args
-    { host   :: Maybe String <?> "host"
-    , port   :: Maybe Int    <?> "port"
+    { host     :: Maybe String <?> "host"
+    , port     :: Maybe Int    <?> "port"
+    , user     :: String       <?> "username"
+    , password :: String       <?> "password"
     } deriving (Show, Generic, ParseRecord)
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) <- getRecord "Lists all users."
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful pw) <- getRecord "Lists all users."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    xs <- usersIO host' port'
+    xs <- usersIO host' port' (UserName n) (Password pw)
     forM_ xs print

@@ -20,7 +20,7 @@ import Grading.Utils.Tar
 data Args = Args
     { host       :: Maybe String <?> "host"
     , port       :: Maybe Int    <?> "port"
-    , username   :: String       <?> "username"
+    , user       :: String       <?> "username"
     , password   :: String       <?> "password"
     , submission :: Int          <?> "submission id"
     , folder     :: FilePath     <?> "folder"

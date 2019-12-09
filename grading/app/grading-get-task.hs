@@ -18,6 +18,8 @@ import Grading.Utils.Tar
 data Args = Args
     { host      :: Maybe String <?> "host"
     , port      :: Maybe Int    <?> "port"
+    , user      :: String       <?> "username"
+    , password  :: String       <?> "password"
     , task      :: Int          <?> "task id"
     , taskDir   :: FilePath     <?> "task folder"
     , sampleDir :: FilePath     <?> "sample folder"
@@ -25,11 +27,11 @@ data Args = Args
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful tid) (Helpful tf) (Helpful sf) 
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful pw) (Helpful tid) (Helpful tf) (Helpful sf) 
         <- getRecord "Downloads a task."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    t <- getTaskIO host' port' $ TaskId tid
+    t <- getTaskIO host' port' (UserName n) (Password pw) $ TaskId tid
     putStrLn $ "downloaded archives for task " ++ show tid
     extractArchive (tTask t) tf
     extractArchive (tSample t) sf

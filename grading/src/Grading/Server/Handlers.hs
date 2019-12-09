@@ -50,11 +50,14 @@ addUserHandler n (e, pw) = do
             logMsg $ "added user " ++ show u
             return NoContent
 
-usersHandler :: GradingM [User]
-usersHandler = withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
+usersHandler :: Administrator -> GradingM [User]
+usersHandler admin = do
+    logMsg $ "authorized administrator " ++ show admin
+    withDB $ \conn -> liftIO $ query_ conn "SELECT * FROM users ORDER BY id ASC"
 
-addTaskHandler :: Task Unchecked -> GradingM TaskId
-addTaskHandler t = do
+addTaskHandler :: Administrator -> Task Unchecked -> GradingM TaskId
+addTaskHandler admin t = do
+    logMsg $ "authorized administrator " ++ show admin
     let d = tImage t
     res <- withDB $ \conn -> liftIO $ try $ do
         checkedTask   <- checkArchive_ $ tTask t
@@ -83,8 +86,9 @@ addTaskHandler t = do
             logMsg $ "added task " ++ show tid
             return tid
 
-getTaskHandler :: TaskId -> GradingM (Task Checked)
-getTaskHandler tid = do
+getTaskHandler :: Administrator -> TaskId -> GradingM (Task Checked)
+getTaskHandler admin tid = do
+    logMsg $ "authorized administrator " ++ show admin
     etask <- withDB $ \conn -> liftIO $ try $ do
         [t] <- query conn "SELECT * FROM tasks where id = ?" (Only tid)
         return t
@@ -110,8 +114,9 @@ getSubmissionHandler admin sid = do
             logMsg $ "ERROR downloading submission " ++ show sid ++ ": " ++ displayException e
             throwError err400
 
-postSubmissionHandler :: Submission Unchecked -> GradingM (Submission Checked)
-postSubmissionHandler sub = do
+postSubmissionHandler :: User -> Submission Unchecked -> GradingM (Submission Checked)
+postSubmissionHandler u sub = do
+    logMsg $ "authorized administrator " ++ show u
     let n   = subUser sub
         tid = subTask sub
     let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "

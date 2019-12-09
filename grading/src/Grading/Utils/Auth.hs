@@ -3,6 +3,7 @@
 module Grading.Utils.Auth
     ( toAuthData
     , checkAdmin
+    , checkUser
     ) where
 
 import qualified Data.Binary          as B
