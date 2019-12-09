@@ -15,17 +15,17 @@ import Grading.Client
 import Grading.Types
 
 data Args = Args
-    { host   :: Maybe String <?> "host"
-    , port   :: Maybe Int    <?> "port"
-    , user   :: String       <?> "username"
-    , email  :: String       <?> "email"
+    { host     :: Maybe String <?> "host"
+    , port     :: Maybe Int    <?> "port"
+    , user     :: String       <?> "username"
+    , email    :: String       <?> "email"
+    , password :: String       <?> "password"
     } deriving (Show, Generic, ParseRecord)
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful e) <- getRecord "Adds a user."
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful e) (Helpful pw) <- getRecord "Adds a user."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-        u     = User (UserName n) (EMail e)
-    addUserIO host' port' u
-    putStrLn $ "successfully added user " ++ show u
+    addUserIO host' port' (UserName n) (EMail e) (Password pw)
+    putStrLn $ "successfully added user " ++ show n

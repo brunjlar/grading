@@ -26,6 +26,7 @@ module Grading.Types
     , ContainerId (..)
     , SubmissionId (..)
     , Password (..)
+    , Base64 (..)
     , Salt (..)
     , Hash (..)
     , mimeRenderBinary
@@ -36,12 +37,14 @@ import           Control.Exception                (ErrorCall (..), SomeException
 import           Data.Aeson                       (FromJSON, ToJSON)
 import           Data.Binary                      (Binary (..), decodeOrFail, encode)
 import qualified Data.Binary                      as B
+import qualified Data.ByteString.Base64.Lazy      as B64
 import           Data.ByteString.Lazy             (ByteString)
+import qualified Data.ByteString.Lazy.Char8       as B8
 import           Data.Kind                        (Type)
 import           Data.Proxy                       (Proxy (..))
 import           Data.Time                        (UTCTime)
 import           Data.Typeable                    (Typeable, typeRep)
-import           Database.SQLite.Simple           (field, FromRow (..))
+import           Database.SQLite.Simple           (field, FromRow (..), ToRow (..))
 import           Database.SQLite.Simple.FromField (Field, FromField (..))
 import           Database.SQLite.Simple.Ok        (Ok (..))
 import           Database.SQLite.Simple.ToField   (ToField (..))
@@ -64,10 +67,19 @@ newtype EMail = EMail String
 data User = User 
     { userName  :: !UserName
     , userEMail :: !EMail
+    , userSalt  :: !Salt
+    , userHash  :: !Hash
     } deriving (Show, Read, Eq, Ord, Generic, Binary, FromJSON, ToJSON)
 
 instance FromRow User where
-    fromRow = User <$> field <*> field
+    fromRow = User <$> field <*> field <*> field <*> field
+
+instance ToRow User where
+    toRow u = [ toField $ userName u
+              , toField $ userEMail u
+              , toField $ userSalt u
+              , toField $ userHash u
+              ]
 
 newtype DockerImage = DockerImage String
     deriving stock (Show, Read, Eq, Ord, Generic)
@@ -174,13 +186,24 @@ instance ToField Result where
     toField = toFieldShow
 
 newtype Password = Password String
-    deriving newtype (Show, Read, Eq, Ord)
+    deriving newtype (Show, Read, Eq, Ord, FromJSON, ToJSON)
 
-newtype Salt = Salt ByteString
-    deriving newtype (Show, Read, Eq, Ord, Binary, FromField, ToField)
+newtype Salt = Salt Base64
+    deriving newtype (Show, Read, Eq, Ord, Binary, FromJSON, ToJSON, FromField, ToField)
 
-newtype Hash = Hash ByteString
-    deriving newtype (Show, Read, Eq, Ord, Binary, FromField, ToField)
+newtype Hash = Hash Base64
+    deriving newtype (Show, Read, Eq, Ord, Binary, FromJSON, ToJSON, FromField, ToField)
+
+newtype Base64 = Base64 String
+    deriving newtype (Show, Read, Eq, Ord, FromJSON, ToJSON, FromField, ToField)
+
+instance Binary Base64 where
+
+    put (Base64 s) = case B64.decode $ B8.pack s of
+        Right bs -> put bs 
+        Left e   -> error e
+
+    get = Base64 . B8.unpack . B64.encode <$> get
 
 fromFieldRead :: forall a. (Read a, Typeable a) => Field -> Ok a
 fromFieldRead f = case fromField f of

@@ -28,7 +28,7 @@ import Grading.Submission
 import Grading.Types
 import Grading.Utils.Tar      (archive, IsChecked (..), normFolder)
 
-addUser        :: UserName -> EMail -> ClientM NoContent
+addUser        :: UserName -> (EMail, Password) -> ClientM NoContent
 users          :: ClientM [User]
 addTask        :: Task Unchecked -> ClientM TaskId
 getTask        :: TaskId -> ClientM (Task Checked) 
@@ -45,8 +45,8 @@ clientIO host port c = do
         Left err -> throwIO $ userError $ show err
         Right a  -> return a
 
-addUserIO :: String -> Int -> User -> IO ()
-addUserIO host port u = void $ clientIO host port $ addUser (userName u) (userEMail u)
+addUserIO :: String -> Int -> UserName -> EMail -> Password -> IO ()
+addUserIO host port n e pw = void $ clientIO host port $ addUser n (e, pw) 
 
 usersIO :: String -> Int -> IO [User]
 usersIO host port = clientIO host port users

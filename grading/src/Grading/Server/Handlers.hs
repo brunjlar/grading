@@ -21,6 +21,7 @@ import Grading.Server.GradingM
 import Grading.Submission        (Submission (..))
 import Grading.Types
 import Grading.Utils.CheckResult
+import Grading.Utils.Crypto
 import Grading.Utils.Submit      (submitArchive)
 import Grading.Utils.Tar         (checkArchive_, IsChecked (..))
 
@@ -33,10 +34,12 @@ gradingServerT =
     :<|> getSubmissionHandler
     :<|> postSubmissionHandler
 
-addUserHandler :: UserName -> EMail -> GradingM NoContent
-addUserHandler n e = do
-    let u = User n e
-    res <- withDB $ \conn -> liftIO $ try $ execute conn "INSERT INTO users (id, email) VALUES (?,?)" (n, e)
+addUserHandler :: UserName -> (EMail, Password) -> GradingM NoContent
+addUserHandler n (e, pw) = do
+    s <- salt
+    let h = hash pw s
+        u = User n e s h
+    res <- withDB $ \conn -> liftIO $ try $ execute conn "INSERT INTO users (id, email, salt, hash) VALUES (?, ?, ?, ?)" u
     case res of
         Left (err :: SomeException) -> do
             logMsg $ "ERROR adding user " ++ show u ++ ": " ++ show err
