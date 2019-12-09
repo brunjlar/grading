@@ -9,6 +9,7 @@ module Grading.Server.GradingM
     , initContext
     , runGradingM
     , logMsg
+    , withDBIO
     , withDB
     , isAdmin
     ) where
@@ -52,56 +53,17 @@ logMsg msg = do
     lock <- GradingM $ asks gcLock
     liftIO $ withMVar lock $ \() -> putStrLn msg
 
+withDBIO :: GC -> (Connection -> IO a) -> IO a
+withDBIO gc f = withConnection (gcDB gc) $ \conn -> do
+    execute_ conn "PRAGMA foreign_keys = ON"
+    f conn
+
 withDB :: (Connection -> GradingM a) -> GradingM a
 withDB f = GradingM $ ReaderT $ \gc -> do
-    ea <- liftIO $ withConnection (gcDB gc) $ \conn -> do
-        execute_ conn "PRAGMA foreign_keys = ON"
-        runHandler . runGradingM gc . f $ conn
+    ea <- liftIO $ withDBIO gc $ runHandler . runGradingM gc . f
     case ea of
         Left err -> throwError err
         Right a  -> return a
 
 isAdmin :: UserName -> GradingM Bool
 isAdmin n = GradingM $ ReaderT $ \gc -> return $ n `elem` gcAdmins gc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

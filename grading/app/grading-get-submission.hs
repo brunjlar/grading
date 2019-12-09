@@ -20,16 +20,18 @@ import Grading.Utils.Tar
 data Args = Args
     { host       :: Maybe String <?> "host"
     , port       :: Maybe Int    <?> "port"
+    , username   :: String       <?> "username"
+    , password   :: String       <?> "password"
     , submission :: Int          <?> "submission id"
     , folder     :: FilePath     <?> "folder"
     } deriving (Show, Generic, ParseRecord)
 
 main :: IO ()
 main = do
-    Args (Helpful mhost) (Helpful mport) (Helpful sid) (Helpful f) <- getRecord "Downloads a submission."
+    Args (Helpful mhost) (Helpful mport) (Helpful n) (Helpful pw) (Helpful sid) (Helpful f) <- getRecord "Downloads a submission."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    sub <- getSubmissionIO host' port' $ SubmissionId sid
+    sub <- getSubmissionIO host' port' (UserName n) (Password pw) $ SubmissionId sid
     putStrLn "downloaded submission"
     reportSubmission sub
     case subArchive sub of

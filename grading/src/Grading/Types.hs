@@ -19,6 +19,8 @@ module Grading.Types
     , EMail (..)
     , Role (..)
     , User (..)
+    , Administrator (getUser)
+    , administrator
     , DockerImage (..)
     , Require (..)
     , required
@@ -93,6 +95,14 @@ instance ToRow User where
               , toField $ userSalt u
               , toField $ userHash u
               ]
+
+newtype Administrator = Administrator {getUser :: User}
+    deriving stock (Show, Read, Eq, Ord)
+
+administrator :: User -> Administrator
+administrator u
+    | userRole u == Admin = Administrator u
+    | otherwise           = error $ "user " ++ show u ++ " is no administrator" 
 
 newtype DockerImage = DockerImage String
     deriving stock (Show, Read, Eq, Ord, Generic)
@@ -199,7 +209,7 @@ instance ToField Result where
     toField = toFieldShow
 
 newtype Password = Password String
-    deriving newtype (Show, Read, Eq, Ord, FromJSON, ToJSON)
+    deriving newtype (Show, Read, Eq, Ord, FromJSON, ToJSON, Binary)
 
 newtype Salt = Salt Base64
     deriving newtype (Show, Read, Eq, Ord, Binary, FromJSON, ToJSON, FromField, ToField)

@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -17,6 +18,7 @@ import Grading.API
 import Grading.Server.GradingM
 import Grading.Server.Handlers
 import Grading.Types
+import Grading.Utils.Auth       (checkAdmin)
 
 defaultPort :: Port
 defaultPort = 8080
@@ -36,31 +38,9 @@ serveGrading mport madmins = do
     run (getPort mport) $ gradingAppT gc
 
 gradingAppT :: GC -> Application
-gradingAppT gc = serve gradingAPI $ gradingServer gc
+gradingAppT gc = serveWithContext gradingAPI ctx $ gradingServer gc
+  where
+    ctx = checkAdmin gc :. EmptyContext
 
 gradingServer :: GC -> Server GradingAPI
-gradingServer gc = hoistServer gradingAPI (runGradingM gc) gradingServerT
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+gradingServer gc = hoistServerWithContext gradingAPI (Proxy :: Proxy '[BasicAuthCheck Administrator]) (runGradingM gc) gradingServerT

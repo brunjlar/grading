@@ -26,13 +26,14 @@ import Grading.API
 import Grading.Server         (getPort)
 import Grading.Submission
 import Grading.Types
+import Grading.Utils.Auth
 import Grading.Utils.Tar      (archive, IsChecked (..), normFolder)
 
 addUser        :: UserName -> (EMail, Password) -> ClientM NoContent
 users          :: ClientM [User]
 addTask        :: Task Unchecked -> ClientM TaskId
 getTask        :: TaskId -> ClientM (Task Checked) 
-getSubmission  :: SubmissionId -> ClientM (Submission Checked)
+getSubmission  :: BasicAuthData -> SubmissionId -> ClientM (Submission Checked)
 postSubmission :: Submission Unchecked -> ClientM (Submission Checked)
 addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission = client gradingAPI
 
@@ -57,8 +58,8 @@ addTaskIO host port td = clientIO host port $ addTask td
 getTaskIO :: String -> Int -> TaskId -> IO (Task Checked) 
 getTaskIO host port tid = clientIO host port $ getTask tid
 
-getSubmissionIO :: String -> Int -> SubmissionId -> IO (Submission Checked)
-getSubmissionIO host port sid = clientIO host port $ getSubmission sid
+getSubmissionIO :: String -> Int -> UserName -> Password -> SubmissionId -> IO (Submission Checked)
+getSubmissionIO host port n pw sid = clientIO host port $ getSubmission (toAuthData n pw) sid
 
 postSubmissionIO :: String -> Int -> UserName -> TaskId -> FilePath -> IO (Submission Checked)
 postSubmissionIO host port n tid fp = do

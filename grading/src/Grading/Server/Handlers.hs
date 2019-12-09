@@ -96,8 +96,9 @@ getTaskHandler tid = do
             logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
             throwError err400
 
-getSubmissionHandler :: SubmissionId -> GradingM (Submission Checked)
-getSubmissionHandler sid = do
+getSubmissionHandler :: Administrator -> SubmissionId -> GradingM (Submission Checked)
+getSubmissionHandler admin sid = do
+    logMsg $ "authorized administrator " ++ show admin
     esub <- withDB $ \conn -> liftIO $ try $ do
         [sub] <- query conn "SELECT * FROM submissions where id = ?" (Only sid)
         return sub

@@ -15,6 +15,7 @@ library
         , Grading.Server.Handlers
         , Grading.Submission
         , Grading.Types
+        , Grading.Utils.Auth
         , Grading.Utils.CheckResult
         , Grading.Utils.Crypto
         , Grading.Utils.Report
