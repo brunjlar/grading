@@ -25,6 +25,9 @@ module Grading.Types
     , Task (..)
     , ContainerId (..)
     , SubmissionId (..)
+    , Password (..)
+    , Salt (..)
+    , Hash (..)
     , mimeRenderBinary
     , mimeUnrenderBinary
     ) where
@@ -169,6 +172,15 @@ instance FromField Result where
 
 instance ToField Result where
     toField = toFieldShow
+
+newtype Password = Password String
+    deriving newtype (Show, Read, Eq, Ord)
+
+newtype Salt = Salt ByteString
+    deriving newtype (Show, Read, Eq, Ord, Binary, FromField, ToField)
+
+newtype Hash = Hash ByteString
+    deriving newtype (Show, Read, Eq, Ord, Binary, FromField, ToField)
 
 fromFieldRead :: forall a. (Read a, Typeable a) => Field -> Ok a
 fromFieldRead f = case fromField f of

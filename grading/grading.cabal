@@ -16,6 +16,7 @@ library
         , Grading.Submission
         , Grading.Types
         , Grading.Utils.CheckResult
+        , Grading.Utils.Crypto
         , Grading.Utils.Report
         , Grading.Utils.Submit
         , Grading.Utils.Tar
@@ -26,6 +27,7 @@ library
         , binary
         , bytestring
         , containers
+        , cryptonite
         , directory
         , direct-sqlite
         , filepath
