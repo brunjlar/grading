@@ -130,7 +130,7 @@ postSubmissionHandler u sub = do
         let ma  = case res of
                     Tested _ -> Just checked
                     _        -> Nothing
-        execute conn "INSERT INTO submissions (userid, taskid, time, archive, result) VALUES (?,?,?,?,?)" (n, tid, now, ma, res)
+        execute conn "INSERT INTO submissions (userid, taskid, time, archive, result, remark) VALUES (?,?,?,?,?)" (n, tid, now, ma, res, Nothing :: Maybe String)
         [Only sid] <- query_ conn "SELECT last_insert_rowid()"
         return (sid, now, res)
     case e of
@@ -147,4 +147,5 @@ postSubmissionHandler u sub = do
                 , subTime    = Required now
                 , subArchive = Nothing
                 , subResult  = Required res
+                , subRemark  = Nothing
                 }

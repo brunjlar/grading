@@ -28,6 +28,7 @@ data Submission (c :: IsChecked) = Submission
     , subTime    :: !(Require c UTCTime)
     , subArchive :: !(Maybe (Archive c))
     , subResult  :: !(Require c Result)
+    , subRemark  :: !(Maybe String)
     } deriving (Show, Eq, Ord, Generic)
 
 deriving instance Read (Submission Unchecked)
@@ -36,7 +37,7 @@ deriving instance Binary (Submission Unchecked)
 deriving instance Binary (Submission Checked)
 
 instance FromRow (Submission Checked) where
-    fromRow = (\(sid, n, tid, t, ma, r) -> Submission sid n tid t ma r) <$> fromRow
+    fromRow = (\(sid, n, tid, t, ma, r, rm) -> Submission sid n tid t ma r rm) <$> fromRow
 
 instance MimeRender OctetStream (Submission Unchecked) where
     mimeRender = mimeRenderBinary
@@ -49,3 +50,4 @@ instance MimeUnrender OctetStream (Submission Unchecked) where
 
 instance MimeUnrender OctetStream (Submission Checked) where
     mimeUnrender = mimeUnrenderBinary
+

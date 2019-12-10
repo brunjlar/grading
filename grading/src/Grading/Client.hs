@@ -72,5 +72,6 @@ postSubmissionIO host port n pw tid fp = do
                 , subTime    = NotRequired
                 , subArchive = Just unchecked
                 , subResult  = NotRequired
+                , subRemark  = Nothing
                 }
     clientIO host port $ postSubmission (toAuthData n pw) sub

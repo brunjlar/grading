@@ -24,6 +24,9 @@ reportSubmission sub = do
     printf "task: %s\n" $ show $ subTask sub
     printf "time: %s\n" $ show $ subTime sub
     reportResult $ required $ subResult sub
+    case subRemark sub of
+        Nothing -> return ()
+        Just rm -> printf "remark: %s\n" rm
 
 reportResult :: Result -> IO ()
 reportResult res = case res of
