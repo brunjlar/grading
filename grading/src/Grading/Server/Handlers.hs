@@ -11,6 +11,7 @@ module Grading.Server.Handlers
     ) where
 
 import Control.Exception         (throwIO, try, Exception (..), SomeException)
+import Control.Monad             (when)
 import Data.Maybe                (fromJust)
 import Data.Time.Clock.POSIX     (getCurrentTime)
 import Database.SQLite.Simple
@@ -23,7 +24,7 @@ import Grading.Types
 import Grading.Utils.CheckResult
 import Grading.Utils.Crypto
 import Grading.Utils.Submit      (submitArchive)
-import Grading.Utils.Tar         (checkArchive_, IsChecked (..))
+import Grading.Utils.Tar         (checkArchive_, IsChecked (..), emptyArchive)
 
 gradingServerT :: ServerT GradingAPI GradingM
 gradingServerT = 
@@ -86,16 +87,17 @@ addTaskHandler admin t = do
             logMsg $ "added task " ++ show tid
             return tid
 
-getTaskHandler :: Administrator -> TaskId -> GradingM (Task Checked)
-getTaskHandler admin tid = do
-    logMsg $ "authorized administrator " ++ show admin
+getTaskHandler :: User -> TaskId -> Bool -> GradingM (Task Checked)
+getTaskHandler u tid withSample = do
+    when (withSample && userRole u /= Admin) $ throwError err401 -- only admins may see the sample solution!
+    logMsg $ "authorized user " ++ show u
     etask <- withDB $ \conn -> liftIO $ try $ do
         [t] <- query conn "SELECT * FROM tasks where id = ?" (Only tid)
         return t
     case etask of
         Right task                -> do
             logMsg $ "downloaded task " ++ show tid
-            return task
+            return $ if withSample then task else task {tSample = emptyArchive}
         Left (e :: SomeException) -> do
             logMsg $ "ERROR downloading task " ++ show tid ++ ": " ++ displayException e
             throwError err400
@@ -116,7 +118,7 @@ getSubmissionHandler admin sid = do
 
 postSubmissionHandler :: User -> Submission Unchecked -> GradingM (Submission Checked)
 postSubmissionHandler u sub = do
-    logMsg $ "authorized administrator " ++ show u
+    logMsg $ "authorized user " ++ show u
     let n   = subUser sub
         tid = subTask sub
     let msg ="upload request from user " ++ show n ++ " for task " ++ show tid ++ ": "

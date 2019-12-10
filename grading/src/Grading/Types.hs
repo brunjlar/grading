@@ -54,18 +54,19 @@ import           Database.SQLite.Simple.ToField   (ToField (..))
 import           Database.SQLite3                 (SQLData)
 import           GHC.Generics                     (Generic)
 import           Servant
+import           Text.Printf                      (PrintfArg)
 import           Text.Read                        (readMaybe)
 
 import           Grading.Utils.Result
 import           Grading.Utils.Tar
 
 newtype UserName = UserName String
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 newtype EMail = EMail String
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 data Role = Student | Admin
     deriving stock (Show, Read, Eq, Ord, Generic, Typeable)
@@ -105,12 +106,12 @@ administrator u
     | otherwise           = error $ "user " ++ show u ++ " is no administrator" 
 
 newtype DockerImage = DockerImage String
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 newtype TaskId = TaskId Int
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 data Require (c :: IsChecked) (a :: Type) :: Type where
     NotRequired :: Require Unchecked a
@@ -172,12 +173,12 @@ instance MimeUnrender OctetStream (Task Checked) where
     mimeUnrender = mimeUnrenderBinary
 
 newtype ContainerId = ContainerId String
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (FromJSON, ToJSON, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, FromJSON, ToJSON, FromField, ToField)
 
 newtype SubmissionId = SubmissionId Int
-    deriving stock (Show, Read, Eq, Ord, Generic)
-    deriving newtype (Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
+    deriving stock (Generic)
+    deriving newtype (Show, Read, Eq, Ord, PrintfArg, Binary, FromJSON, ToJSON, FromHttpApiData, ToHttpApiData, FromField, ToField)
 
 instance FromJSON TestResult
 instance FromJSON TestsAndHints

@@ -32,7 +32,7 @@ import Grading.Utils.Tar      (archive, IsChecked (..), normFolder)
 addUser        :: UserName -> (EMail, Password) -> ClientM NoContent
 users          :: BasicAuthData -> ClientM [User]
 addTask        :: BasicAuthData -> Task Unchecked -> ClientM TaskId
-getTask        :: BasicAuthData -> TaskId -> ClientM (Task Checked) 
+getTask        :: BasicAuthData -> TaskId -> Bool -> ClientM (Task Checked) 
 getSubmission  :: BasicAuthData -> SubmissionId -> ClientM (Submission Checked)
 postSubmission :: BasicAuthData -> Submission Unchecked -> ClientM (Submission Checked)
 addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission = client gradingAPI
@@ -55,8 +55,8 @@ usersIO host port n pw = clientIO host port $ users $ toAuthData n pw
 addTaskIO :: String -> Int -> UserName -> Password -> Task Unchecked -> IO TaskId
 addTaskIO host port n pw td = clientIO host port $ addTask (toAuthData n pw) td
 
-getTaskIO :: String -> Int -> UserName -> Password -> TaskId -> IO (Task Checked) 
-getTaskIO host port n pw tid = clientIO host port $ getTask (toAuthData n pw) tid
+getTaskIO :: String -> Int -> UserName -> Password -> TaskId -> Bool -> IO (Task Checked) 
+getTaskIO host port n pw tid withSample = clientIO host port $ getTask (toAuthData n pw) tid withSample
 
 getSubmissionIO :: String -> Int -> UserName -> Password -> SubmissionId -> IO (Submission Checked)
 getSubmissionIO host port n pw sid = clientIO host port $ getSubmission (toAuthData n pw) sid

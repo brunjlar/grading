@@ -12,8 +12,10 @@ module Grading.Utils.Tar
     , IsChecked (..)
     , Archive
     , archive
+    , emptyArchive
     , archivedBytes
     , archiveSize
+    , nullArchive
     , uncheck
     , tarFolder
     , extractArchive
@@ -48,6 +50,9 @@ newtype Archive (c :: IsChecked) = Archive ByteString
 archive :: ByteString -> Archive Unchecked
 archive = Archive
 
+emptyArchive :: Archive c
+emptyArchive = Archive BS.empty
+
 archivedBytes :: Archive c -> ByteString
 archivedBytes = coerce
 
@@ -56,6 +61,10 @@ uncheck = coerce
 
 archiveSize :: Archive c -> Int
 archiveSize = fromIntegral . BS.length . archivedBytes
+
+nullArchive :: Archive c -> Bool
+nullArchive = (== 0) . archiveSize
+
 tarFolder :: MonadIO m => FilePath -> m (Archive Checked)
 tarFolder f = liftIO $ do
     a         <- normFolder f
@@ -112,12 +121,14 @@ toEntries = fmap toTarError
           . decompress
 
 checkArchive :: MonadIO m => Archive Unchecked -> m (Either TarError (Archive Checked))
-checkArchive unchecked = liftIO $ do
-    em <- try $ checkEntries $ toEntries $ archivedBytes unchecked
-    return $ case em of
-        Left (e :: SomeException) -> Left (DecompressionError $ displayException e)
-        Right (Just e)            -> Left e
-        Right Nothing             -> Right (coerce unchecked)
+checkArchive unchecked
+    | nullArchive unchecked = return $ Right emptyArchive
+    | otherwise             = liftIO $ do
+        em <- try $ checkEntries $ toEntries $ archivedBytes unchecked
+        return $ case em of
+            Left (e :: SomeException) -> Left (DecompressionError $ displayException e)
+            Right (Just e)            -> Left e
+            Right Nothing             -> Right (coerce unchecked)
   where
     checkEntries :: Tar.Entries TarError -> IO (Maybe TarError)
     checkEntries (Tar.Next _ es) = checkEntries es

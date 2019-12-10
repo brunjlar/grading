@@ -11,6 +11,7 @@ module Main
 import Control.Monad   (forM_)
 import Data.Maybe      (fromMaybe)
 import Options.Generic
+import Text.Printf     (printf)
 
 import Grading.Client
 import Grading.Types
@@ -28,4 +29,4 @@ main = do
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
     xs <- usersIO host' port' (UserName n) (Password pw)
-    forM_ xs print
+    forM_ xs $ \u -> printf "%-20s %-30s %-10s\n" (userName u) (userEMail u) (show $ userRole u)
