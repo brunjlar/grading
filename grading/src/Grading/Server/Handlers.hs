@@ -34,6 +34,7 @@ gradingServerT =
     :<|> getTaskHandler
     :<|> getSubmissionHandler
     :<|> postSubmissionHandler
+    :<|> getSubmissionsHandler
 
 addUserHandler :: UserName -> (EMail, Password) -> GradingM NoContent
 addUserHandler n (e, pw) = do
@@ -106,7 +107,7 @@ getSubmissionHandler :: Administrator -> SubmissionId -> GradingM (Submission Ch
 getSubmissionHandler admin sid = do
     logMsg $ "authorized administrator " ++ show admin
     esub <- withDB $ \conn -> liftIO $ try $ do
-        [sub] <- query conn "SELECT * FROM submissions where id = ?" (Only sid)
+        [sub] <- query conn "SELECT * FROM submissions WHERE id = ?" (Only sid)
         return sub
     case esub of
         Right sub                 -> do
@@ -130,7 +131,7 @@ postSubmissionHandler u sub = do
         let ma  = case res of
                     Tested _ -> Just checked
                     _        -> Nothing
-        execute conn "INSERT INTO submissions (userid, taskid, time, archive, result, remark) VALUES (?,?,?,?,?)" (n, tid, now, ma, res, Nothing :: Maybe String)
+        execute conn "INSERT INTO submissions (userid, taskid, time, archive, result, remark) VALUES (?,?,?,?,?,?)" (n, tid, now, ma, res, Nothing :: Maybe String)
         [Only sid] <- query_ conn "SELECT last_insert_rowid()"
         return (sid, now, res)
     case e of
@@ -149,3 +150,16 @@ postSubmissionHandler u sub = do
                 , subResult  = Required res
                 , subRemark  = Nothing
                 }
+
+getSubmissionsHandler :: Administrator -> UserName -> TaskId -> GradingM [Submission Checked]
+getSubmissionsHandler admin n tid = do
+    logMsg $ "authorized administrator " ++ show admin
+    esubs <- withDB $ \conn -> liftIO $ try $
+        query conn "SELECT * FROM submissions WHERE userid = ? AND taskid = ?" (n, tid)
+    case esubs of
+        Right subs                -> do
+            logMsg $ "downloaded " ++ show (length subs) ++ " submission(s) for user " ++ show n ++ " and task " ++ show tid
+            return $ map (\sub -> sub{subArchive = Nothing}) subs
+        Left (e :: SomeException) -> do
+            logMsg $ "ERROR downloading submissions for user " ++ show n ++ " and task " ++ show tid ++ ": " ++ displayException e
+            throwError err400

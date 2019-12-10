@@ -11,6 +11,7 @@ module Grading.Client
     , getTaskIO
     , getSubmissionIO
     , postSubmissionIO
+    , getSubmissionsIO    
     ) where
 
 import Codec.Archive.Tar      (pack, write)
@@ -35,7 +36,8 @@ addTask        :: BasicAuthData -> Task Unchecked -> ClientM TaskId
 getTask        :: BasicAuthData -> TaskId -> Bool -> ClientM (Task Checked) 
 getSubmission  :: BasicAuthData -> SubmissionId -> ClientM (Submission Checked)
 postSubmission :: BasicAuthData -> Submission Unchecked -> ClientM (Submission Checked)
-addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission = client gradingAPI
+getSubmissions :: BasicAuthData -> UserName -> TaskId -> ClientM [Submission Checked]
+addUser :<|> users :<|> addTask :<|> getTask :<|> getSubmission :<|> postSubmission :<|> getSubmissions = client gradingAPI
 
 clientIO :: String -> Int -> ClientM a -> IO a
 clientIO host port c = do
@@ -75,3 +77,7 @@ postSubmissionIO host port n pw tid fp = do
                 , subRemark  = Nothing
                 }
     clientIO host port $ postSubmission (toAuthData n pw) sub
+
+getSubmissionsIO :: String -> Int -> UserName -> Password -> UserName -> TaskId -> IO [Submission Checked]
+getSubmissionsIO host port na pw n tid = clientIO host port $ getSubmissions (toAuthData na pw) n tid
+

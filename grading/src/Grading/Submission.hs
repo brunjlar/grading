@@ -51,3 +51,9 @@ instance MimeUnrender OctetStream (Submission Unchecked) where
 instance MimeUnrender OctetStream (Submission Checked) where
     mimeUnrender = mimeUnrenderBinary
 
+instance MimeRender OctetStream [Submission Checked] where
+    mimeRender = mimeRenderBinary
+
+instance MimeUnrender OctetStream [Submission Checked] where
+    mimeUnrender = mimeUnrenderBinary
+

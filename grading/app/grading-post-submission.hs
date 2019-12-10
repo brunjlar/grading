@@ -31,7 +31,7 @@ main = do
         <- getRecord "Uploads a submission to the grading server."
     let host' = fromMaybe "127.0.0.1" mhost
         port' = getPort mport
-    printf "uploading submission folder '%s' for task %d to %s:%d for user '%s'"
+    printf "uploading submission folder '%s' for task %d to %s:%d for user '%s'\n"
         folder' tid host' port' n
 
     sub <- postSubmissionIO host' port' (UserName n) (Password pw) (TaskId tid) folder'
